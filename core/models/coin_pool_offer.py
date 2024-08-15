@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from .chain import Chain
 
 
+# TODO: After I understand what does "доли в пуле" mean add this field
 class CoinPoolOffer(Base):
     coin_id: Mapped[UUID] = mapped_column(ForeignKey("coins.id"), nullable=False)
     coin: Mapped["Coin"] = relationship("Coin", back_populates="pools", lazy="joined")
