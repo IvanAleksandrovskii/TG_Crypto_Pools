@@ -1,3 +1,5 @@
+import re
+
 from icecream import ic
 
 import logging
@@ -51,3 +53,16 @@ def setup_logging() -> logging.Logger:
 
 ic("logger")
 logger = ic(setup_logging())
+
+
+# Debug WARNING
+if settings.run.debug:
+    logger.warning("DEBUG mode is on!")
+    # Regex for login and password searching in URL
+    masked_url = re.sub(r'(://[^:]+:)[^@]+(@)', r'\1******\2', settings.db.url)
+    # DB URL
+    logger.info("Database URL: %s", masked_url)
+
+# Database ECHO WARNING
+if settings.db.echo:
+    logger.warning("Database ECHO is on!")
