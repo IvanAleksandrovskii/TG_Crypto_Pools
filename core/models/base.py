@@ -42,3 +42,9 @@ class Base(DeclarativeBase):
         This method should be used as the base for all queries.
         """
         return select(cls).where(cls.is_active == True)
+
+    def __repr__(self):
+        return f"{self.__class__.__name__}(id={self.id})"
+
+    def __str__(self):
+        return f"{self.__class__.__name__}(id={self.id})"
