@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from .coin import Coin
 
 
+# TODO: no_delete logic
 class Chain(Base):
     name: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     coins: Mapped[List["Coin"]] = relationship(

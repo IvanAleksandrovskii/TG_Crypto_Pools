@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 
 # TODO: After I understand what does "доли в пуле" mean add this field
+# TODO: no_delete logic
 class CoinPoolOffer(Base):
     coin_id: Mapped[UUID] = mapped_column(ForeignKey("coins.id"), nullable=False)
     coin: Mapped["Coin"] = relationship("Coin", back_populates="pools", lazy="joined")

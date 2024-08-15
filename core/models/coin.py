@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from .coin_pool_offer import CoinPoolOffer
 
 
+# TODO: no_delete logic
 class Coin(Base):
     name: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     code: Mapped[str] = mapped_column(String, nullable=False, unique=True)
