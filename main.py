@@ -9,6 +9,7 @@ from sqladmin import Admin
 
 from core.admin import async_sqladmin_db_helper, sqladmin_authentication_backend
 from core.models import db_helper
+from core.admin.models import setup_admin
 from core import settings, logger
 from api import api_router
 
@@ -26,6 +27,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Shutdown
     logger.info("Shutting down the FastAPI application...")
     await db_helper.dispose()
+    await async_sqladmin_db_helper.dispose()
 
 
 main_app = FastAPI(
@@ -36,6 +38,8 @@ main_app = FastAPI(
 # SQLAdmin
 admin = Admin(main_app, engine=async_sqladmin_db_helper.engine, authentication_backend=sqladmin_authentication_backend)
 
+# Register admin views
+setup_admin(admin)
 
 main_app.include_router(api_router, prefix=settings.api.prefix)
 
