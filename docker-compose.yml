@@ -1,0 +1,15 @@
+services:
+
+  pg:
+    # latest or any fresh one, using modern version of postgres method for table's uuid increment
+    image: postgres:latest
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-crypto_db_tg_webapp}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+    ports:
+      - "5432:5432"
+#    networks:
+#      - inner_
+#    volumes:
+#      - pg_data:/var/lib/postgresql/data
