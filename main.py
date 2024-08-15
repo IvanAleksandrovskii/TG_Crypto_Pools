@@ -8,6 +8,7 @@ import uvicorn
 
 from core.models import db_helper
 from core import settings, logger
+from api import api_router
 
 ic.disable()
 # ic.enable()
@@ -29,6 +30,8 @@ main_app = FastAPI(
     lifespan=lifespan,
     default_response_class=ORJSONResponse,
 )
+
+main_app.include_router(api_router, prefix=settings.api.prefix)
 
 if __name__ == '__main__':
     uvicorn.run(ic("main:main_app"),
