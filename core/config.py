@@ -23,6 +23,11 @@ POSTGRES_MAX_OVERFLOW = int(os.getenv("POSTGRES_MAX_OVERFLOW", 20))
 
 POSTGRES_ECHO = os.getenv("POSTGRES_ECHO", "True").lower() in ('true', '1')
 
+# SQLAdmin ENV variables
+SQLADMIN_SECRET_KEY = os.getenv("SQLADMIN_SECRET_KEY", "sqladmin_secret_key")
+SQLADMIN_USERNAME = os.getenv("SQLADMIN_USERNAME", "admin")
+SQLADMIN_PASSWORD = os.getenv("SQLADMIN_PASSWORD", "password")
+
 
 class RunConfig(BaseModel):
     host: str = APP_RUN_HOST
@@ -31,7 +36,7 @@ class RunConfig(BaseModel):
 
 
 class DBConfig(BaseModel):
-    url: PostgresDsn = f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@pg:5432/{POSTGRES_DB}"
+    url: PostgresDsn = f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@0.0.0.0:5432/{POSTGRES_DB}"
     pool_size: int = POSTGRES_POOL_SIZE
     max_overflow: int = POSTGRES_MAX_OVERFLOW
     echo: bool = POSTGRES_ECHO
@@ -50,10 +55,17 @@ class APIConfig(BaseModel):
     v1: str = "/v1"
 
 
+class SQLAdminConfig(BaseModel):
+    secret_key: str = SQLADMIN_SECRET_KEY
+    username: str = SQLADMIN_USERNAME
+    password: str = SQLADMIN_PASSWORD
+
+
 class Settings(BaseSettings):
     run: RunConfig = RunConfig()
     db: DBConfig = DBConfig()
     api: APIConfig = APIConfig()
+    admin_panel: SQLAdminConfig = SQLAdminConfig()
 
 
 settings = Settings()
