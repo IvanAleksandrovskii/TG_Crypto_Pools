@@ -45,9 +45,15 @@ class DBConfig(BaseModel):
     }
 
 
+class APIConfig(BaseModel):
+    prefix: str = "/api"
+    v1: str = "/v1"
+
+
 class Settings(BaseSettings):
     run: RunConfig = RunConfig()
     db: DBConfig = DBConfig()
+    api: APIConfig = APIConfig()
 
 
 settings = Settings()
