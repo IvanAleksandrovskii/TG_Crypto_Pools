@@ -11,12 +11,13 @@ from core.models import CoinPoolOffer, Coin, Pool, Chain
 
 class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
     column_list = [
-        CoinPoolOffer.id, 'coin', 'pool', 'chain',
+        'pool', 'chain', 'coin', CoinPoolOffer.is_active,
+        CoinPoolOffer.liquidity_token, CoinPoolOffer.id,
         CoinPoolOffer.apr_from, CoinPoolOffer.apr_to, CoinPoolOffer.current_rate,
+        CoinPoolOffer.previous_rate,
         CoinPoolOffer.amount_from, CoinPoolOffer.amount_to,
         CoinPoolOffer.time_delta_from, CoinPoolOffer.time_delta_to,
-        CoinPoolOffer.pool_share, CoinPoolOffer.previous_rate,
-        CoinPoolOffer.liquidity_token, CoinPoolOffer.is_active
+        CoinPoolOffer.pool_share,
     ]
     column_formatters = {
         'coin': lambda m, a: str(m.coin) if m.coin else None,

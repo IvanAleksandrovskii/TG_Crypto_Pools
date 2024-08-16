@@ -11,10 +11,7 @@ from core.admin import async_sqladmin_db_helper
 
 
 class CoinAdmin(BaseAdminModel, model=Coin):
-    column_list = [Coin.id, Coin.name, Coin.code, 'chains', 'pools', Coin.is_active]
-    column_formatters = {
-        Coin.id: lambda m, a: str(m)
-    }
+    column_list = [Coin.code, Coin.is_active, Coin.name, Coin.id, ]  # , 'chains', 'pools'
     column_sortable_list = [Coin.name, Coin.code, Coin.is_active]
     column_searchable_list = [Coin.name, Coin.code]
     column_filters = [Coin.is_active, Coin.name, Coin.code]

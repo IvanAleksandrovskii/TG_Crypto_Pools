@@ -11,10 +11,7 @@ from core.admin import async_sqladmin_db_helper
 
 
 class ChainAdmin(BaseAdminModel, model=Chain):
-    column_list = [Chain.id, Chain.name, 'coins', Chain.is_active]
-    column_formatters = {
-        Chain.id: lambda m, a: str(m)
-    }
+    column_list = [Chain.name, Chain.is_active, Chain.id, ]  # , 'coins'
     column_sortable_list = [Chain.name, Chain.is_active]
     column_searchable_list = [Chain.name]
     column_filters = [Chain.is_active, Chain.name]
