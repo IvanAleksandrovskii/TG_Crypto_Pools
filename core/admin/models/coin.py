@@ -10,7 +10,10 @@ from .base import BaseAdminModel
 
 # TODO: add coin symbol field (?)
 class CoinAdmin(BaseAdminModel, model=Coin):
-    column_list = [Coin.id, Coin.name, Coin.code, 'chains', 'pools', 'max_apr', 'min_amount', 'min_lock_period', Coin.is_active]
+    column_list = [Coin.id, Coin.name, Coin.code, 'chains', 'pools', Coin.is_active]
+    column_formatters = {
+        Coin.id: lambda m, a: str(m)
+    }
     column_sortable_list = [Coin.name, Coin.code, Coin.is_active]
     column_searchable_list = [Coin.name, Coin.code]
     column_filters = [Coin.is_active, Coin.name, Coin.code]

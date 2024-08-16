@@ -9,6 +9,9 @@ from .base import BaseAdminModel
 
 class PoolAdmin(BaseAdminModel, model=Pool):
     column_list = [Pool.id, Pool.name, Pool.website_url, 'coin_pool_offers', Pool.is_active]
+    column_formatters = {
+        Pool.id: lambda m, a: str(m)
+    }
     column_sortable_list = [Pool.name, Pool.is_active]
     column_searchable_list = [Pool.name, Pool.website_url]
     column_filters = [Pool.is_active, Pool.name]

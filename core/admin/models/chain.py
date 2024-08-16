@@ -9,6 +9,9 @@ from .base import BaseAdminModel
 
 class ChainAdmin(BaseAdminModel, model=Chain):
     column_list = [Chain.id, Chain.name, 'coins', Chain.is_active]
+    column_formatters = {
+        Chain.id: lambda m, a: str(m)
+    }
     column_sortable_list = [Chain.name, Chain.is_active]
     column_searchable_list = [Chain.name]
     column_filters = [Chain.is_active, Chain.name]
