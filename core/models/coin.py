@@ -3,7 +3,7 @@ from sqlalchemy import String
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .base import Base
-from .coin_chain_pool_associations import coin_chain
+from .coin_chain_association import coin_chain
 
 if TYPE_CHECKING:
     from .chain import Chain
