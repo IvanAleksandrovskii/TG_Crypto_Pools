@@ -12,12 +12,10 @@ from core.models import CoinPoolOffer, Coin, Pool, Chain
 class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
     column_list = [
         'pool', 'chain', 'coin', CoinPoolOffer.is_active,
-        CoinPoolOffer.liquidity_token, CoinPoolOffer.id,
-        CoinPoolOffer.apr_from, CoinPoolOffer.apr_to, CoinPoolOffer.current_rate,
-        CoinPoolOffer.previous_rate,
-        CoinPoolOffer.amount_from, CoinPoolOffer.amount_to,
-        CoinPoolOffer.time_delta_from, CoinPoolOffer.time_delta_to,
-        CoinPoolOffer.pool_share,
+        CoinPoolOffer.apr, CoinPoolOffer.previous_apr,
+        CoinPoolOffer.amount_from, CoinPoolOffer.lock_period,
+        CoinPoolOffer.pool_share, CoinPoolOffer.liquidity_token,
+        CoinPoolOffer.liquidity_token_name, CoinPoolOffer.id,
     ]
     column_formatters = {
         'coin': lambda m, a: str(m.coin) if m.coin else None,
@@ -25,38 +23,34 @@ class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
         'chain': lambda m, a: str(m.chain) if m.chain else None,
     }
     column_sortable_list = [
-        CoinPoolOffer.apr_from, CoinPoolOffer.apr_to, CoinPoolOffer.current_rate,
-        CoinPoolOffer.amount_from, CoinPoolOffer.amount_to,
-        CoinPoolOffer.time_delta_from, CoinPoolOffer.time_delta_to,
-        CoinPoolOffer.pool_share, CoinPoolOffer.previous_rate,
-        CoinPoolOffer.liquidity_token, CoinPoolOffer.is_active
+        CoinPoolOffer.apr, CoinPoolOffer.previous_apr,
+        CoinPoolOffer.amount_from, CoinPoolOffer.lock_period,
+        CoinPoolOffer.pool_share, CoinPoolOffer.liquidity_token,
+        CoinPoolOffer.liquidity_token_name, CoinPoolOffer.is_active
     ]
-    column_searchable_list = ['coin.name', 'pool.name', 'chain.name']
+    column_searchable_list = ['coin.name', 'pool.name', 'chain.name', 'liquidity_token_name']
     column_filters = [
-        CoinPoolOffer.apr_from, CoinPoolOffer.apr_to, CoinPoolOffer.current_rate,
-        CoinPoolOffer.amount_from, CoinPoolOffer.amount_to,
-        CoinPoolOffer.time_delta_from, CoinPoolOffer.time_delta_to,
-        CoinPoolOffer.pool_share, CoinPoolOffer.previous_rate,
-        CoinPoolOffer.liquidity_token, CoinPoolOffer.is_active
+        CoinPoolOffer.apr, CoinPoolOffer.previous_apr,
+        CoinPoolOffer.amount_from, CoinPoolOffer.lock_period,
+        CoinPoolOffer.pool_share, CoinPoolOffer.liquidity_token,
+        CoinPoolOffer.liquidity_token_name, CoinPoolOffer.is_active
     ]
 
     form_columns = [
-        'pool', 'chain', 'coin', 'apr_from', 'apr_to', 'current_rate', 'previous_rate', 
-        'amount_from', 'amount_to', 'time_delta_from', 'time_delta_to',
-        'pool_share', 'liquidity_token', 'is_active'
+        'pool', 'chain', 'coin', 'apr', 'previous_apr',
+        'amount_from', 'lock_period', 'pool_share',
+        'liquidity_token', 'liquidity_token_name', 'is_active'
     ]
     form_args = {
-        'apr_from': {'validators': [validators.DataRequired(), validators.NumberRange(min=0, max=100)]},
-        'apr_to': {'validators': [validators.DataRequired(), validators.NumberRange(min=0, max=100)]},
-        'current_rate': {'validators': [validators.DataRequired(), validators.NumberRange(min=0, max=100)]},
+        'apr': {'validators': [validators.DataRequired(), validators.NumberRange(min=0, max=100)]},
+        'previous_apr': {'validators': [validators.Optional()]},
         'amount_from': {'validators': [validators.DataRequired(), validators.NumberRange(min=0)]},
-        'amount_to': {'validators': [validators.DataRequired(), validators.NumberRange(min=0)]},
-        'time_delta_from': {'validators': [validators.DataRequired(), validators.NumberRange(min=0)]},
-        'time_delta_to': {'validators': [validators.DataRequired(), validators.NumberRange(min=0)]},
+        'lock_period': {'validators': [validators.DataRequired(), validators.NumberRange(min=0)]},
         'pool_share': {'validators': [validators.DataRequired(), validators.NumberRange(min=0, max=100)]},
         'coin': {'validators': [validators.DataRequired()]},
         'pool': {'validators': [validators.DataRequired()]},
         'chain': {'validators': [validators.DataRequired()]},
+        'liquidity_token_name': {'validators': [validators.Optional()]}
     }
 
     def get_query(self):
@@ -76,6 +70,7 @@ class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
                 CoinPoolOffer.coin.has(Coin.name.ilike(f"%{term}%")),
                 CoinPoolOffer.pool.has(Pool.name.ilike(f"%{term}%")),
                 CoinPoolOffer.chain.has(Chain.name.ilike(f"%{term}%")),
+                # CoinPoolOffer.liquidity_token_name.ilike(f"%{term}%")
             )
         )
 
