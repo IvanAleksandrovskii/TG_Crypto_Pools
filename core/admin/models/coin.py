@@ -16,6 +16,8 @@ class CoinAdmin(BaseAdminModel, model=Coin):
     column_searchable_list = [Coin.name, Coin.code]
     column_filters = [Coin.is_active, Coin.name, Coin.code]
 
+    can_delete = False
+
     form_columns = ['name', 'code', 'chains', 'is_active']
     form_args = {
         'name': {'validators': [validators.DataRequired()]},

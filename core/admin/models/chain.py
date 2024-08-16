@@ -16,6 +16,8 @@ class ChainAdmin(BaseAdminModel, model=Chain):
     column_searchable_list = [Chain.name]
     column_filters = [Chain.is_active, Chain.name]
 
+    can_delete = False
+
     form_columns = ['name', 'coins', 'is_active']
     form_args = {
         'name': {'validators': [validators.DataRequired()]}

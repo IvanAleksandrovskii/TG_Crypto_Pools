@@ -41,9 +41,9 @@ class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
     ]
 
     form_columns = [
-        'coin', 'pool', 'chain', 'apr_from', 'apr_to', 'current_rate',
+        'pool', 'chain', 'coin', 'apr_from', 'apr_to', 'current_rate', 'previous_rate', 
         'amount_from', 'amount_to', 'time_delta_from', 'time_delta_to',
-        'pool_share', 'previous_rate', 'liquidity_token', 'is_active'
+        'pool_share', 'liquidity_token', 'is_active'
     ]
     form_args = {
         'apr_from': {'validators': [validators.DataRequired(), validators.NumberRange(min=0, max=100)]},
