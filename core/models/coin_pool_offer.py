@@ -17,7 +17,7 @@ class CoinPoolOffer(Base):
     coin_id: Mapped[UUID] = mapped_column(ForeignKey("coins.id"), nullable=False)
     coin: Mapped["Coin"] = relationship("Coin", back_populates="pools", lazy="joined")
 
-    pool_id: Mapped[UUID] = mapped_column(ForeignKey("pools.id"), nullable=False)
+    pool_id: Mapped[UUID] = mapped_column(ForeignKey("pools.id", ondelete="CASCADE"), nullable=False)
     pool: Mapped["Pool"] = relationship("Pool", back_populates="coin_pool_offers", lazy="joined")
 
     chain_id: Mapped[UUID] = mapped_column(ForeignKey("chains.id"), nullable=False)
