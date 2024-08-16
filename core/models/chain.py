@@ -19,3 +19,9 @@ class Chain(Base):
         back_populates="chains",
         lazy="selectin",
     )
+
+    def __repr__(self):
+        return f"Chain(name='{self.name}', id={self.id})"
+
+    def __str__(self):
+        return f"{self.name} (id={self.id})"

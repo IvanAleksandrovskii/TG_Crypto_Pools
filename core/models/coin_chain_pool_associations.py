@@ -15,6 +15,7 @@ coin_chain = Table(
 pool_coin = Table(
     'pool_coin',
     Base.metadata,
-    Column('pool_id', ForeignKey('pools.id'), primary_key=True),
-    Column('coin_id', ForeignKey('coins.id'), primary_key=True)
+    Column('pool_id', UUID(as_uuid=True), ForeignKey('pools.id'), nullable=False),
+    Column('coin_id', UUID(as_uuid=True), ForeignKey('coins.id'), nullable=False),
+    UniqueConstraint('pool_id', 'coin_id', name='uq_pool_coin')
 )

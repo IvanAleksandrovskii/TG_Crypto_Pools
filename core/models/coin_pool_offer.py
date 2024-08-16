@@ -25,6 +25,8 @@ class CoinPoolOffer(Base):
 
     apr_from: Mapped[float] = mapped_column(Float, nullable=False)
     apr_to: Mapped[float] = mapped_column(Float, nullable=False)
+
+    previous_rate: Mapped[float] = mapped_column(Float)  # previous rate in pool
     current_rate: Mapped[float] = mapped_column(Float, nullable=False)
 
     amount_from: Mapped[float] = mapped_column(Float, nullable=False)
@@ -34,5 +36,8 @@ class CoinPoolOffer(Base):
     time_delta_to: Mapped[int] = mapped_column(Integer, nullable=False)  # days
 
     pool_share: Mapped[float] = mapped_column(Float, nullable=False)  # share in pool
-    previous_rate: Mapped[float] = mapped_column(Float)  # previous rate in pool
+
     liquidity_token: Mapped[bool] = mapped_column(Boolean, default=False)  # token liquidity
+
+    def __repr__(self):
+        return f"CoinPoolOffer(coin='{self.coin.name}', pool='{self.pool.name}', chain='{self.chain.name}', id={self.id})"

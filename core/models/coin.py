@@ -26,14 +26,20 @@ class Coin(Base):
         lazy="selectin"
     )
 
-    @hybrid_property
-    def max_apr(self) -> float:
-        return max((pool.apr_to for pool in self.pools), default=0)
+    def __repr__(self):
+        return f"Coin(name='{self.name}', code='{self.code}', id={self.id})"
 
-    @hybrid_property
-    def min_amount(self) -> float:
-        return min((pool.amount_from for pool in self.pools), default=0)
+    def __str__(self):
+        return f"{self.name} ({self.code}) (id={self.id})"
 
-    @hybrid_property
-    def min_lock_period(self) -> int:
-        return min((pool.time_delta_from for pool in self.pools), default=0)
+    # @hybrid_property
+    # def max_apr(self) -> float:
+    #     return max((pool.apr_to for pool in self.pools), default=0)
+    #
+    # @hybrid_property
+    # def min_amount(self) -> float:
+    #     return min((pool.amount_from for pool in self.pools), default=0)
+    #
+    # @hybrid_property
+    # def min_lock_period(self) -> int:
+    #     return min((pool.time_delta_from for pool in self.pools), default=0)
