@@ -41,3 +41,6 @@ class CoinPoolOffer(Base):
 
     def __repr__(self):
         return f"CoinPoolOffer(coin='{self.coin.name}', pool='{self.pool.name}', chain='{self.chain.name}', id={self.id})"
+
+    def __str__(self):
+        return f"(pool='{self.pool.name}', chain='{self.chain.name}', coin='{self.coin.name}', id={self.id})"

@@ -30,7 +30,7 @@ class Coin(Base):
         return f"Coin(name='{self.name}', code='{self.code}', id={self.id})"
 
     def __str__(self):
-        return f"{self.name} ({self.code}) (id={self.id})"
+        return f"{self.name} ({self.code})"
 
     # @hybrid_property
     # def max_apr(self) -> float:
