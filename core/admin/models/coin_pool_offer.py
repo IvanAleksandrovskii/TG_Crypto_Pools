@@ -6,7 +6,6 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from starlette.requests import Request
 from wtforms import validators
-from wtforms.form import Form
 
 from core import logger
 from core.admin.models.base import BaseAdminModel

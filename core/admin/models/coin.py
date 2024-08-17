@@ -7,7 +7,6 @@ from wtforms.widgets import ListWidget, CheckboxInput
 from core.models import Coin, Chain
 from core import logger
 from .base import BaseAdminModel
-from core.admin import async_sqladmin_db_helper
 
 
 class CoinAdmin(BaseAdminModel, model=Coin):
@@ -54,13 +53,13 @@ class CoinAdmin(BaseAdminModel, model=Coin):
         return str(value)
 
     async def _get_chain_choices(self):
-        async with async_sqladmin_db_helper.session_getter() as session:
+        async with self.session_getter() as session:
             result = await session.execute(select(Chain).where(Chain.is_active == True))
             chains = result.scalars().all()
             return [(str(chain.id), chain.name) for chain in chains]
 
     async def get_one(self, _id):
-        async with async_sqladmin_db_helper.session_getter() as session:
+        async with self.session_getter() as session:
             stmt = select(self.model).options(
                 joinedload(Coin.chains)
             ).filter_by(id=_id)
