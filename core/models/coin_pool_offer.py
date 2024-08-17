@@ -12,7 +12,7 @@ if TYPE_CHECKING:
 
 class CoinPoolOffer(Base):
     __table_args__ = (
-        UniqueConstraint('pool_id', 'chain_id', 'coin_id', name='uq_pool_chain_coin'),
+        UniqueConstraint('pool_id', 'chain_id', 'coin_id', 'lock_period', name='uq_pool_chain_coin_lock_period'),
     )
 
     coin_id: Mapped[UUID] = mapped_column(ForeignKey("coins.id"), nullable=False)
