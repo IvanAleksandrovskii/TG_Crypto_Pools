@@ -9,7 +9,39 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
     ports:
       - "5432:5432"
-#    networks:
-#      - inner_
+    networks:
+      - inner_crypto_invest_pools_service
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${APP_RUN_PORT:-8000}:8000"
+    networks:
+      - inner_crypto_invest_pools_service
+    depends_on:
+      - pg
+    environment:
+      - DEBUG=${DEBUG:-True}
+      - APP_RUN_HOST=${APP_RUN_HOST:-0.0.0.0}
+      - APP_RUN_PORT=${APP_RUN_PORT:-8000}
+
+      - POSTGRES_DB=${POSTGRES_DB:-crypto_db_tg_webapp}
+      - POSTGRES_ECHO=${POSTGRES_ECHO:-True}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_POOL_SIZE=${POSTGRES_POOL_SIZE:-10}
+      - POSTGRES_MAX_OVERFLOW=${POSTGRES_MAX_OVERFLOW:-20}
+
+      - SQLADMIN_SECRET_KEY=${SQLADMIN_SECRET_KEY:-secret_key_12345}
+      - SQLADMIN_USERNAME=${SQLADMIN_USERNAME:-admin}
+      - SQLADMIN_PASSWORD=${SQLADMIN_PASSWORD:-password}
+
+    command: /app/start.sh
+
+networks:
+  inner_crypto_invest_pools_service:
+    external: false
+    driver: bridge
 #    volumes:
 #      - pg_data:/var/lib/postgresql/data

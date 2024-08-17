@@ -119,22 +119,6 @@ class BaseAdminModel(ModelView):
                 logger.error(f"Error in update_model: {str(e)}")
                 raise HTTPException(status_code=500, detail=f"An unexpected error occurred while updating {self.name}.")
 
-    async def _update_model_fields(self, session: AsyncSession, model: Any, data: dict):
-        for key, value in data.items():
-            prop = getattr(self.model, key).property
-            if isinstance(prop, RelationshipProperty):
-                related_objects = []
-                for obj_id in value:
-                    related_model = prop.mapper.class_
-                    related_obj = await session.get(related_model, obj_id)
-                    if related_obj:
-                        related_objects.append(related_obj)
-                setattr(model, key, related_objects)
-            elif key.endswith('_id'):
-                setattr(model, key, str(value))
-            else:
-                setattr(model, key, value)
-
     async def _process_action(self, request: Request, is_active: bool) -> None:
         pks = request.query_params.get("pks", "").split(",")
         if pks:
