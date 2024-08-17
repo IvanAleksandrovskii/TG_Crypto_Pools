@@ -1,5 +1,5 @@
 from typing import TYPE_CHECKING
-from sqlalchemy import UUID, ForeignKey, Float, Integer, Boolean, String
+from sqlalchemy import UUID, ForeignKey, Float, Integer, Boolean, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -11,6 +11,10 @@ if TYPE_CHECKING:
 
 
 class CoinPoolOffer(Base):
+    __table_args__ = (
+        UniqueConstraint('pool_id', 'chain_id', 'coin_id', name='uq_pool_chain_coin'),
+    )
+
     coin_id: Mapped[UUID] = mapped_column(ForeignKey("coins.id"), nullable=False)
     coin: Mapped["Coin"] = relationship("Coin", back_populates="pools", lazy="joined")  # coin with can_delete=False
 
