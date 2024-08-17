@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from .coin_pool_offer import CoinPoolOffer
 
 
-# TODO: no_delete logic
+# TODO: no_delete logic (?) now in admin can_delete=False
 class Coin(Base):
     name: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     code: Mapped[str] = mapped_column(String, nullable=False, unique=True)

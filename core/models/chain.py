@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from .coin import Coin
 
 
-# TODO: no_delete logic
+# TODO: no_delete logic (?) now in admin can_delete=False
 class Chain(Base):
     name: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     coins: Mapped[List["Coin"]] = relationship(
