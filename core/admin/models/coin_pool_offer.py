@@ -14,9 +14,8 @@ from core.models import CoinPoolOffer, Coin, Pool, Chain
 
 class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
     column_list = [
-        'pool', 'chain', 'coin', CoinPoolOffer.is_active,
-        CoinPoolOffer.apr, CoinPoolOffer.previous_apr,
-        CoinPoolOffer.amount_from, CoinPoolOffer.lock_period,
+        'pool', 'chain', 'coin', CoinPoolOffer.lock_period, CoinPoolOffer.is_active,
+        CoinPoolOffer.apr, CoinPoolOffer.previous_apr, CoinPoolOffer.amount_from,
         CoinPoolOffer.pool_share, CoinPoolOffer.liquidity_token,
         CoinPoolOffer.liquidity_token_name, CoinPoolOffer.id,
     ]
@@ -178,7 +177,7 @@ class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
             except IntegrityError as e:
                 await session.rollback()
                 if 'uq_pool_chain_coin' in str(e):
-                    error_message = f"A {self.name} for this combination of Pool, Chain, and Coin already exists."
+                    error_message = f"A {self.name} for this combination of Pool, Chain, Coin and Lock Period already exists."
                     logger.warning(f"Attempt to update to duplicate {self.name}: {error_message}")
                 else:
                     error_message = f"Failed to update {self.name} due to a database constraint."
