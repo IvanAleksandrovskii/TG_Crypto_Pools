@@ -1,4 +1,6 @@
 from typing import Any
+
+from fastapi import HTTPException
 from sqladmin import ModelView, action
 from sqlalchemy import select, or_
 from sqlalchemy.exc import IntegrityError
@@ -57,13 +59,32 @@ class BaseAdminModel(ModelView):
             result = await session.execute(stmt)
             return result.scalar_one_or_none()
 
+    async def _update_model_fields(self, session: AsyncSession, model: Any, data: dict):
+        for key, value in data.items():
+            prop = getattr(self.model, key).property
+            if isinstance(prop, RelationshipProperty):
+                if prop.uselist:
+                    related_model = prop.mapper.class_
+                    stmt = select(related_model).where(related_model.id.in_(value))
+                    result = await session.execute(stmt)
+                    related_objects = result.scalars().all()
+                    setattr(model, key, related_objects)
+                else:
+                    related_model = prop.mapper.class_
+                    related_obj = await session.get(related_model, value)
+                    setattr(model, key, related_obj)
+            elif key.endswith('_id'):
+                setattr(model, key, str(value))
+            else:
+                setattr(model, key, value)
+
     async def insert_model(self, request: Request, data: dict) -> Any:
         logger.info(f"Inserting new {self.name}")
         async with AsyncSession(async_sqladmin_db_helper.engine) as session:
             try:
                 model = self.model()
-                session.add(model)
                 await self._update_model_fields(session, model, data)
+                session.add(model)
                 await session.commit()
                 await session.refresh(model)
                 logger.info(f"Created {self.name} successfully with id: {model.id}")
@@ -71,11 +92,11 @@ class BaseAdminModel(ModelView):
             except IntegrityError as e:
                 await session.rollback()
                 logger.error(f"IntegrityError in insert_model: {str(e)}")
-                raise ValueError(f"A {self.name} with these parameters already exists: {str(e)}.")  # TODO: del error from response
+                raise HTTPException(status_code=400, detail=f"A {self.name} with these parameters already exists.")
             except Exception as e:
                 await session.rollback()
                 logger.error(f"Error in insert_model: {str(e)}")
-                raise
+                raise HTTPException(status_code=500, detail=f"An unexpected error occurred while creating {self.name}.")
 
     async def update_model(self, request: Request, pk: Any, data: dict) -> Any:
         logger.info(f"Updating {self.name} with id: {pk}")
@@ -83,7 +104,7 @@ class BaseAdminModel(ModelView):
             try:
                 model = await session.get(self.model, pk)
                 if not model:
-                    raise ValueError(f"{self.name} with id {pk} not found")
+                    raise HTTPException(status_code=404, detail=f"{self.name} with id {pk} not found")
                 await self._update_model_fields(session, model, data)
                 await session.commit()
                 await session.refresh(model)
@@ -92,11 +113,11 @@ class BaseAdminModel(ModelView):
             except IntegrityError as e:
                 await session.rollback()
                 logger.error(f"IntegrityError in update_model: {str(e)}")
-                raise ValueError(f"Update violates unique constraints for {self.name}.")
+                raise HTTPException(status_code=400, detail=f"Update violates unique constraints for {self.name}.")
             except Exception as e:
                 await session.rollback()
                 logger.error(f"Error in update_model: {str(e)}")
-                raise
+                raise HTTPException(status_code=500, detail=f"An unexpected error occurred while updating {self.name}.")
 
     async def _update_model_fields(self, session: AsyncSession, model: Any, data: dict):
         for key, value in data.items():

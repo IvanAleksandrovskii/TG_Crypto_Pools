@@ -1,8 +1,12 @@
 from typing import Any
+
+from fastapi import HTTPException
 from sqlalchemy import or_
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 from starlette.requests import Request
 from wtforms import validators
+from wtforms.form import Form
 
 from core import logger
 from core.admin.models.base import BaseAdminModel
@@ -50,7 +54,8 @@ class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
         'coin': {'validators': [validators.DataRequired()]},
         'pool': {'validators': [validators.DataRequired()]},
         'chain': {'validators': [validators.DataRequired()]},
-        'liquidity_token_name': {'validators': [validators.Optional()]}
+        'liquidity_token': {'label': 'Is Liquidity Token'},
+        'liquidity_token_name': {'label': 'Liquidity Token Name', 'validators': [validators.Optional()]}
     }
 
     def get_query(self):
@@ -74,19 +79,39 @@ class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
             )
         )
 
+    async def validate_coin_chain_relation(self, session, coin_id, chain_id):
+        coin = await session.get(Coin, coin_id)
+        if not coin:
+            raise ValueError("Invalid coin selected.")
+
+        chain = await session.get(Chain, chain_id)
+        if not chain:
+            raise ValueError("Invalid chain selected.")
+
+        if chain not in coin.chains:
+            raise ValueError(
+                f"The selected coin '{coin.name}' is not associated with the selected chain '{chain.name}'.")
+
+        return coin, chain
+
     async def insert_model(self, request: Request, data: dict) -> Any:
         logger.info(f"Inserting new {self.name}")
         async with self.session_getter() as session:
             try:
+                # Validate coin-chain relation
+                coin, chain = await self.validate_coin_chain_relation(session, data['coin'], data['chain'])
+
+                # Validate liquidity_token and liquidity_token_name
+                if data.get('liquidity_token') and not data.get('liquidity_token_name'):
+                    raise ValueError("Please provide a name for the liquidity token.")
+
                 model = self.model()
 
                 # Processing related objects fields
-                if 'coin' in data and data['coin']:
-                    model.coin_id = data['coin']
+                model.coin_id = coin.id
+                model.chain_id = chain.id
                 if 'pool' in data and data['pool']:
                     model.pool_id = data['pool']
-                if 'chain' in data and data['chain']:
-                    model.chain_id = data['chain']
 
                 # Processing other fields
                 for key, value in data.items():
@@ -98,40 +123,73 @@ class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
                 await session.refresh(model)
                 logger.info(f"Created {self.name} successfully with id: {model.id}")
                 return model
+            except ValueError as e:
+                await session.rollback()
+                logger.warning(f"Validation error while creating {self.name}: {str(e)}")
+                raise HTTPException(status_code=400, detail=str(e))
+            except IntegrityError as e:
+                await session.rollback()
+                if 'uq_pool_chain_coin' in str(e):
+                    error_message = f"A {self.name} for this combination of Pool, Chain, and Coin already exists."
+                    logger.warning(f"Attempt to create duplicate {self.name}: {error_message}")
+                else:
+                    error_message = f"Failed to create {self.name} due to a database constraint."
+                    logger.error(f"IntegrityError in insert_model: {str(e)}")
+                raise HTTPException(status_code=400, detail=error_message)
             except Exception as e:
                 await session.rollback()
-                logger.error(f"Error in insert_model: {str(e)}")
-                raise ValueError(f"Failed to create {self.name}: {str(e)}")
+                logger.error(f"Unexpected error in insert_model: {str(e)}")
+                raise HTTPException(status_code=500, detail=f"An unexpected error occurred while creating {self.name}. "
+                                                            f"Please try again or contact support if the issue persists.")
 
     async def update_model(self, request: Request, pk: Any, data: dict) -> Any:
         logger.info(f"Updating {self.name} with id: {pk}")
         async with self.session_getter() as session:
             try:
+                # Validate coin-chain relation
+                coin, chain = await self.validate_coin_chain_relation(session, data['coin'], data['chain'])
+
                 model = await session.get(self.model, pk)
                 if not model:
-                    raise ValueError(f"{self.name} with id {pk} not found")
+                    raise HTTPException(status_code=404, detail=f"{self.name} with id {pk} not found")
 
                 # Processing related objects fields
-                if 'coin' in data and data['coin']:
-                    model.coin_id = data['coin']
+                model.coin_id = coin.id
+                model.chain_id = chain.id
                 if 'pool' in data and data['pool']:
                     model.pool_id = data['pool']
-                if 'chain' in data and data['chain']:
-                    model.chain_id = data['chain']
 
                 # Processing other fields
                 for key, value in data.items():
                     if key not in ['coin', 'pool', 'chain'] and hasattr(model, key):
                         setattr(model, key, value)
 
+                # Validate liquidity_token and liquidity_token_name
+                if model.liquidity_token and not model.liquidity_token_name:
+                    raise ValueError("Please provide a name for the liquidity token.")
+
                 await session.commit()
                 await session.refresh(model)
                 logger.info(f"Updated {self.name} successfully with id: {model.id}")
                 return model
+            except ValueError as e:
+                await session.rollback()
+                logger.warning(f"Validation error while updating {self.name}: {str(e)}")
+                raise HTTPException(status_code=400, detail=str(e))
+            except IntegrityError as e:
+                await session.rollback()
+                if 'uq_pool_chain_coin' in str(e):
+                    error_message = f"A {self.name} for this combination of Pool, Chain, and Coin already exists."
+                    logger.warning(f"Attempt to update to duplicate {self.name}: {error_message}")
+                else:
+                    error_message = f"Failed to update {self.name} due to a database constraint."
+                    logger.error(f"IntegrityError in update_model: {str(e)}")
+                raise HTTPException(status_code=400, detail=error_message)
             except Exception as e:
                 await session.rollback()
-                logger.error(f"Error in update_model: {str(e)}")
-                raise ValueError(f"Failed to update {self.name}: {str(e)}")
+                logger.error(f"Unexpected error in update_model: {str(e)}")
+                raise HTTPException(status_code=500, detail=f"An unexpected error occurred while updating {self.name}. "
+                                                            f"Please try again or contact support if the issue persists.")
 
     async def after_model_change(self, data: dict, model: Any, is_created: bool, request: Request) -> None:
         action = "Created" if is_created else "Updated"

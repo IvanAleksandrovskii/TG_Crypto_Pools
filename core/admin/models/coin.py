@@ -77,8 +77,10 @@ class CoinAdmin(BaseAdminModel, model=Coin):
         await super()._update_model_fields(session, model, data)
         if 'chains' in data:
             chain_ids = data['chains']
-            chains = await session.execute(select(Chain).where(Chain.id.in_(chain_ids)))
-            model.chains = chains.scalars().all()
+            stmt = select(Chain).where(Chain.id.in_(chain_ids))
+            result = await session.execute(stmt)
+            chains = result.scalars().all()
+            model.chains = chains
 
     async def after_model_change(self, data: dict, model: Coin, is_created: bool, request: Request) -> None:
         action = "Created" if is_created else "Updated"
