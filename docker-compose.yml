@@ -1,8 +1,7 @@
 services:
 
   pg:
-    # latest or any fresh one, using modern version of postgres method for table's uuid increment
-    image: postgres:latest
+    image: postgres:16.3
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-crypto_db_tg_webapp}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
