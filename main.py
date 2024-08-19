@@ -1,9 +1,10 @@
+import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 from icecream import ic
 
-from fastapi.responses import ORJSONResponse
-from fastapi import FastAPI
+from fastapi.responses import ORJSONResponse, JSONResponse
+from fastapi import FastAPI, Response, Request
 import uvicorn
 from sqladmin import Admin
 
@@ -42,6 +43,39 @@ admin = Admin(main_app, engine=async_sqladmin_db_helper.engine, authentication_b
 setup_admin(admin)
 
 main_app.include_router(api_router, prefix=settings.api.prefix)
+
+
+# Favicon.ico errors silenced
+@main_app.get('/favicon.ico', include_in_schema=False)
+async def favicon():
+    return Response(status_code=204)
+
+
+# Global exception handler
+@main_app.middleware("http")
+async def catch_exceptions_middleware(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception as exc:
+        if request.url.path == "/favicon.ico":
+            return Response(status_code=204)
+
+        if isinstance(exc, ValueError) and "badly formed hexadecimal UUID string" in str(exc):
+            return Response(status_code=204)
+
+        logger.error(f"Unhandled exception: {str(exc)}")
+        return JSONResponse(
+            status_code=500,
+            content={"message": "Internal server error"}
+        )
+
+
+class NoFaviconFilter(logging.Filter):
+    def filter(self, record):
+        return not any(x in record.getMessage() for x in ['favicon.ico', 'apple-touch-icon'])
+
+
+logging.getLogger("uvicorn.access").addFilter(NoFaviconFilter())
 
 if __name__ == '__main__':
     uvicorn.run(ic("main:main_app"),
