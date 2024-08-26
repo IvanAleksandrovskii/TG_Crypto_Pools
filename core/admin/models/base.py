@@ -18,7 +18,6 @@ class BaseAdminModel(ModelView):
     column_sortable_list = ['id', 'is_active']
     column_searchable_list = ['id']
     column_filters = ['is_active']
-    # column_exclude_list = ['created_at']
 
     page_size = 50
     page_size_options = [25, 50, 100, 200, 500]

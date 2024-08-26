@@ -14,12 +14,10 @@ from .base import BaseAdminModel
 
 
 class ChainAdmin(BaseAdminModel, model=Chain):
-    column_list = [Chain.name, Chain.is_active, Chain.id]
+    column_list = [Chain.name, Chain.is_active, Chain.id, Chain.logo]
     column_sortable_list = [Chain.name, Chain.is_active]
     column_searchable_list = [Chain.name]
     column_filters = [Chain.is_active, Chain.name]
-
-    can_delete = False
 
     form_columns = ['name', 'coins', 'is_active', 'logo']
     form_args = {
@@ -66,29 +64,6 @@ class ChainAdmin(BaseAdminModel, model=Chain):
             ).filter_by(id=_id)
             result = await session.execute(stmt)
             return result.scalar_one_or_none()
-
-    # async def after_model_change(self, data: dict, model: Chain, is_created: bool, request: Request) -> None:
-    #     try:
-    #         action = "Created" if is_created else "Updated"
-    #         logger.info(f"{action} Chain successfully with id: {model.id}")
-    #
-    #         # Process logo upload
-    #         logo = data.get('logo')
-    #         if logo and isinstance(logo, UploadFile):
-    #             try:
-    #                 contents = await logo.read()
-    #                 file_path = await chain_storage.save(logo.filename, contents)
-    #                 model.logo = file_path
-    #                 logger.info(f"Logo uploaded for chain: {model.name}")
-    #
-    #                 async with self.session as session:
-    #                     await session.merge(model)
-    #                     await session.commit()
-    #             except Exception as e:
-    #                 logger.error(f"Error uploading logo for chain {model.name}: {str(e)}")
-    #     except Exception as e:
-    #         logger.error(f"Error in after_model_change for {self.name}: {str(e)}")
-    #         raise HTTPException(status_code=500, detail=f"An unexpected error occurred while create/update {self.name}. Error: {str(e)}")
 
     async def after_model_change(self, data: dict, model: Chain, is_created: bool, request: Request) -> None:
         try:

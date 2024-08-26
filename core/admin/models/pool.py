@@ -10,7 +10,7 @@ from .base import BaseAdminModel
 
 
 class PoolAdmin(BaseAdminModel, model=Pool):
-    column_list = [Pool.name, Pool.is_active, Pool.website_url, Pool.id]
+    column_list = [Pool.name, Pool.is_active, Pool.website_url, Pool.id, Pool.logo]
     column_sortable_list = [Pool.name, Pool.is_active]
     column_searchable_list = [Pool.name, Pool.website_url]
     column_filters = [Pool.is_active, Pool.name]

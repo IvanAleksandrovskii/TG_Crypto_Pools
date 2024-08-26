@@ -14,12 +14,10 @@ from .base import BaseAdminModel
 
 
 class CoinAdmin(BaseAdminModel, model=Coin):
-    column_list = [Coin.code, Coin.is_active, Coin.name, Coin.id]
+    column_list = [Coin.code, Coin.is_active, Coin.name, Coin.id, Coin.logo]
     column_sortable_list = [Coin.name, Coin.code, Coin.is_active]
     column_searchable_list = [Coin.name, Coin.code]
     column_filters = [Coin.is_active, Coin.name, Coin.code]
-
-    can_delete = False
 
     form_columns = ['name', 'code', 'chains', 'is_active', 'logo']
     form_args = {
