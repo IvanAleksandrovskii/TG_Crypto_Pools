@@ -64,10 +64,22 @@ async def get_latest_offers(session: AsyncSession):
 
 @router.get("/", response_model=List[OfferResponse])
 async def get_all_offers(
+    coin_id: Optional[UUID] = Query(None, description="Filter by coin ID"),
+    chain_id: Optional[UUID] = Query(None, description="Filter by chain ID"),
+    pool_id: Optional[UUID] = Query(None, description="Filter by pool ID"),
     session: AsyncSession = Depends(db_helper.session_getter)
 ):
     try:
         query = await get_latest_offers(session)
+
+        # Apply filters based on provided query parameters
+        if coin_id:
+            query = query.filter(CoinPoolOffer.coin_id == coin_id)
+        if chain_id:
+            query = query.filter(CoinPoolOffer.chain_id == chain_id)
+        if pool_id:
+            query = query.filter(CoinPoolOffer.pool_id == pool_id)
+
         result = await session.execute(query)
         offers = result.unique().scalars().all()
     except SQLAlchemyError as e:
@@ -77,7 +89,7 @@ async def get_all_offers(
     return [OfferResponse.model_validate(offer) for offer in offers]
 
 
-@router.get("/{offer_id}", response_model=List[OfferResponse])
+@router.get("/{offer_id}", response_model=List[OfferResponse])  # One and history
 async def get_offer_by_id(
     offer_id: UUID,
     days: Optional[int] = Query(default=None, ge=1, description="Number of days to fetch history"),
