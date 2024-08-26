@@ -16,6 +16,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy project files to the container
 COPY . /app
 
+# Create media directory
+RUN mkdir -p /app/media/coins /app/media/pools /app/media/chains
+
 # Ensure start.sh has executable permissions
 RUN chmod +x /app/start.sh
 

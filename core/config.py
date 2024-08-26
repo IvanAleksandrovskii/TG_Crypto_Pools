@@ -1,4 +1,5 @@
 import os
+from typing import List
 
 from pydantic import BaseModel
 from pydantic.networks import PostgresDsn
@@ -61,11 +62,21 @@ class SQLAdminConfig(BaseModel):
     password: str = SQLADMIN_PASSWORD
 
 
+class MediaConfig(BaseModel):
+    root: str = "/app/media"
+    url_prefix: str = "/media"
+    coins_path: str = "/app/media/coins"
+    pools_path: str = "/app/media/pools"
+    chains_path: str = "/app/media/chains"
+    allowed_image_extensions: List[str] = ['.jpg', '.jpeg', '.png', '.gif', '.svg']
+
+
 class Settings(BaseSettings):
     run: RunConfig = RunConfig()
     db: DBConfig = DBConfig()
     api: APIConfig = APIConfig()
     admin_panel: SQLAdminConfig = SQLAdminConfig()
+    media: MediaConfig = MediaConfig()
 
 
 settings = Settings()

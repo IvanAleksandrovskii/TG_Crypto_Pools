@@ -10,6 +10,9 @@ services:
       - "5432:5432"
     networks:
       - inner_crypto_invest_pools_service
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
   web:
     build:
       context: .
@@ -37,10 +40,14 @@ services:
       - SQLADMIN_PASSWORD=${SQLADMIN_PASSWORD:-password}
 
     command: /app/start.sh
+    volumes:
+      - media_files:/app/media
 
 networks:
   inner_crypto_invest_pools_service:
     external: false
     driver: bridge
-#    volumes:
-#      - pg_data:/var/lib/postgresql/data
+
+volumes:
+  pg_data:
+  media_files:

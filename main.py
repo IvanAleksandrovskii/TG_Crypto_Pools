@@ -4,6 +4,7 @@ from typing import AsyncGenerator
 from icecream import ic
 
 from fastapi.responses import ORJSONResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, Response, Request
 import uvicorn
 from sqladmin import Admin
@@ -43,6 +44,11 @@ admin = Admin(main_app, engine=async_sqladmin_db_helper.engine, authentication_b
 setup_admin(admin)
 
 main_app.include_router(api_router, prefix=settings.api.prefix)
+
+# Mount static file directories
+main_app.mount("/media/coins", StaticFiles(directory=settings.media.coins_path), name="coins_media")
+main_app.mount("/media/pools", StaticFiles(directory=settings.media.pools_path), name="pools_media")
+main_app.mount("/media/chains", StaticFiles(directory=settings.media.chains_path), name="chains_media")
 
 
 # Favicon.ico errors silenced
