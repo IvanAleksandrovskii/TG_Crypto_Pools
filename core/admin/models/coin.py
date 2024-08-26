@@ -1,40 +1,35 @@
-from sqlalchemy import or_, select
-from sqlalchemy.orm import joinedload
+from typing import Any
+
+from fastapi import HTTPException, UploadFile
+from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 from starlette.requests import Request
 from wtforms import validators, SelectMultipleField
+from wtforms.fields import FileField
 from wtforms.widgets import ListWidget, CheckboxInput
 
 from core.models import Coin, Chain
-from core import logger
+from core import logger, coin_storage
 from .base import BaseAdminModel
 
 
 class CoinAdmin(BaseAdminModel, model=Coin):
-    column_list = [Coin.code, Coin.is_active, Coin.name, Coin.id, ]  # , 'chains', 'pools'
+    column_list = [Coin.code, Coin.is_active, Coin.name, Coin.id]
     column_sortable_list = [Coin.name, Coin.code, Coin.is_active]
     column_searchable_list = [Coin.name, Coin.code]
     column_filters = [Coin.is_active, Coin.name, Coin.code]
 
     can_delete = False
 
-    form_columns = ['name', 'code', 'chains', 'is_active']
+    form_columns = ['name', 'code', 'chains', 'is_active', 'logo']
     form_args = {
         'name': {'validators': [validators.DataRequired()]},
-        'code': {'validators': [validators.DataRequired()]}
+        'code': {'validators': [validators.DataRequired()]},
+        'logo': {'validators': [validators.Optional()]}
     }
 
-    def get_query(self):
-        return (
-            super()
-            .get_query()
-            .options(
-                joinedload(Coin.chains),
-                joinedload(Coin.pools)
-            )
-        )
-
-    def search_query(self, stmt, term):
-        return stmt.filter(or_(Coin.name.ilike(f"%{term}%"), Coin.code.ilike(f"%{term}%")))
+    async def search_query(self, stmt, term):
+        return stmt.filter(Coin.name.ilike(f"%{term}%") | Coin.code.ilike(f"%{term}%"))
 
     async def scaffold_form(self):
         form_class = await super().scaffold_form()
@@ -45,6 +40,7 @@ class CoinAdmin(BaseAdminModel, model=Coin):
             option_widget=CheckboxInput(),
             coerce=self._coerce_chain
         )
+        form_class.logo = FileField('Logo')
         return form_class
 
     def _coerce_chain(self, value):
@@ -53,34 +49,47 @@ class CoinAdmin(BaseAdminModel, model=Coin):
         return str(value)
 
     async def _get_chain_choices(self):
-        async with self.session_getter() as session:
+        async with self.session as session:
             result = await session.execute(select(Chain).where(Chain.is_active == True))
             chains = result.scalars().all()
             return [(str(chain.id), chain.name) for chain in chains]
 
     async def get_one(self, _id):
-        async with self.session_getter() as session:
+        async with self.session as session:
             stmt = select(self.model).options(
-                joinedload(Coin.chains)
+                selectinload(Coin.chains)
             ).filter_by(id=_id)
             result = await session.execute(stmt)
             return result.scalar_one_or_none()
 
-    async def edit_form(self, obj):
-        form = await super().edit_form(obj)
-        if obj and obj.chains:
-            form.chains.data = [str(chain.id) for chain in obj.chains]
-        return form
-
-    async def _update_model_fields(self, session, model, data):
-        await super()._update_model_fields(session, model, data)
-        if 'chains' in data:
-            chain_ids = data['chains']
-            stmt = select(Chain).where(Chain.id.in_(chain_ids))
-            result = await session.execute(stmt)
-            chains = result.scalars().all()
-            model.chains = chains
-
     async def after_model_change(self, data: dict, model: Coin, is_created: bool, request: Request) -> None:
-        action = "Created" if is_created else "Updated"
-        logger.info(f"{action} Coin successfully with id: {model.id}")
+        try:
+            action = "Created" if is_created else "Updated"
+            logger.info(f"{action} Coin successfully with id: {model.id}")
+
+            # Process logo upload
+            logo = data.get('logo')
+            if logo and isinstance(logo, UploadFile):
+                try:
+                    file_path = await coin_storage.put(logo)
+                    model.logo = file_path
+                    logger.info(f"Logo uploaded for coin: {model.name}")
+
+                    async with self.session as session:
+                        await session.merge(model)
+                        await session.commit()
+                except Exception as e:
+                    logger.error(f"Error uploading logo for coin {model.name}: {str(e)}")
+        except Exception as e:
+            logger.error(f"Error in after_model_change for {self.name}: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"An unexpected error occurred while create/update {self.name}. Error: {str(e)}")
+
+    async def delete_model(self, request: Request, pk: Any):
+        model = await self.get_one(pk)
+        if model and model.logo:
+            try:
+                coin_storage.delete(model.logo)
+                logger.info(f"Logo deleted for coin: {model.name}")
+            except Exception as e:
+                logger.error(f"Error deleting logo for coin {model.name}: {str(e)}")
+        return await super().delete_model(request, pk)

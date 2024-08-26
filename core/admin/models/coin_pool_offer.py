@@ -3,7 +3,6 @@ from typing import Any
 from fastapi import HTTPException
 from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import joinedload
 from starlette.requests import Request
 from wtforms import validators
 
@@ -14,8 +13,8 @@ from core.models import CoinPoolOffer, Coin, Pool, Chain
 
 class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
     column_list = [
-        'pool', 'chain', 'coin', CoinPoolOffer.lock_period, CoinPoolOffer.is_active,
-        CoinPoolOffer.apr, CoinPoolOffer.previous_apr, CoinPoolOffer.amount_from,
+        'pool', 'chain', 'coin', CoinPoolOffer.created_at, CoinPoolOffer.is_active,
+        CoinPoolOffer.lock_period, CoinPoolOffer.apr, CoinPoolOffer.amount_from,
         CoinPoolOffer.pool_share, CoinPoolOffer.liquidity_token,
         CoinPoolOffer.liquidity_token_name, CoinPoolOffer.id,
     ]
@@ -25,27 +24,26 @@ class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
         'chain': lambda m, a: str(m.chain) if m.chain else None,
     }
     column_sortable_list = [
-        CoinPoolOffer.apr, CoinPoolOffer.previous_apr,
+        CoinPoolOffer.apr, CoinPoolOffer.created_at,
         CoinPoolOffer.amount_from, CoinPoolOffer.lock_period,
         CoinPoolOffer.pool_share, CoinPoolOffer.liquidity_token,
         CoinPoolOffer.liquidity_token_name, CoinPoolOffer.is_active
     ]
     column_searchable_list = ['coin.name', 'pool.name', 'chain.name', 'liquidity_token_name']
     column_filters = [
-        CoinPoolOffer.apr, CoinPoolOffer.previous_apr,
+        CoinPoolOffer.apr, CoinPoolOffer.created_at,
         CoinPoolOffer.amount_from, CoinPoolOffer.lock_period,
         CoinPoolOffer.pool_share, CoinPoolOffer.liquidity_token,
         CoinPoolOffer.liquidity_token_name, CoinPoolOffer.is_active
     ]
 
     form_columns = [
-        'pool', 'chain', 'coin', 'apr', 'previous_apr',
+        'pool', 'chain', 'coin', 'apr',
         'amount_from', 'lock_period', 'pool_share',
         'liquidity_token', 'liquidity_token_name', 'is_active'
     ]
     form_args = {
         'apr': {'validators': [validators.DataRequired(), validators.NumberRange(min=0, max=100)]},
-        'previous_apr': {'validators': [validators.Optional()]},
         'amount_from': {'validators': [validators.DataRequired(), validators.NumberRange(min=0)]},
         'lock_period': {'validators': [validators.DataRequired(), validators.NumberRange(min=0)]},
         'pool_share': {'validators': [validators.DataRequired(), validators.NumberRange(min=0, max=100)]},
@@ -56,24 +54,12 @@ class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
         'liquidity_token_name': {'label': 'Liquidity Token Name', 'validators': [validators.Optional()]}
     }
 
-    def get_query(self):
-        return (
-            super()
-            .get_query()
-            .options(
-                joinedload(CoinPoolOffer.coin),
-                joinedload(CoinPoolOffer.pool),
-                joinedload(CoinPoolOffer.chain),
-            )
-        )
-
-    def search_query(self, stmt, term):
+    async def search_query(self, stmt, term):
         return stmt.filter(
             or_(
                 CoinPoolOffer.coin.has(Coin.name.ilike(f"%{term}%")),
                 CoinPoolOffer.pool.has(Pool.name.ilike(f"%{term}%")),
                 CoinPoolOffer.chain.has(Chain.name.ilike(f"%{term}%")),
-                # CoinPoolOffer.liquidity_token_name.ilike(f"%{term}%")
             )
         )
 
@@ -94,7 +80,7 @@ class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
 
     async def insert_model(self, request: Request, data: dict) -> Any:
         logger.info(f"Inserting new {self.name}")
-        async with self.session_getter() as session:
+        async with self.session as session:
             try:
                 # Validate coin-chain relation
                 coin, chain = await self.validate_coin_chain_relation(session, data['coin'], data['chain'])
@@ -127,12 +113,8 @@ class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
                 raise HTTPException(status_code=400, detail=str(e))
             except IntegrityError as e:
                 await session.rollback()
-                if 'uq_pool_chain_coin' in str(e):
-                    error_message = f"A {self.name} for this combination of Pool, Chain, and Coin already exists."
-                    logger.warning(f"Attempt to create duplicate {self.name}: {error_message}")
-                else:
-                    error_message = f"Failed to create {self.name} due to a database constraint."
-                    logger.error(f"IntegrityError in insert_model: {str(e)}")
+                error_message = f"Failed to create {self.name} due to a database constraint."
+                logger.error(f"IntegrityError in insert_model: {str(e)}")
                 raise HTTPException(status_code=400, detail=error_message)
             except Exception as e:
                 await session.rollback()
@@ -142,7 +124,7 @@ class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
 
     async def update_model(self, request: Request, pk: Any, data: dict) -> Any:
         logger.info(f"Updating {self.name} with id: {pk}")
-        async with self.session_getter() as session:
+        async with self.session as session:
             try:
                 # Validate coin-chain relation
                 coin, chain = await self.validate_coin_chain_relation(session, data['coin'], data['chain'])
@@ -176,12 +158,8 @@ class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
                 raise HTTPException(status_code=400, detail=str(e))
             except IntegrityError as e:
                 await session.rollback()
-                if 'uq_pool_chain_coin' in str(e):
-                    error_message = f"A {self.name} for this combination of Pool, Chain, Coin and Lock Period already exists."
-                    logger.warning(f"Attempt to update to duplicate {self.name}: {error_message}")
-                else:
-                    error_message = f"Failed to update {self.name} due to a database constraint."
-                    logger.error(f"IntegrityError in update_model: {str(e)}")
+                error_message = f"Failed to update {self.name} due to a database constraint."
+                logger.error(f"IntegrityError in update_model: {str(e)}")
                 raise HTTPException(status_code=400, detail=error_message)
             except Exception as e:
                 await session.rollback()
