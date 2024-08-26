@@ -13,13 +13,13 @@ if TYPE_CHECKING:
 
 class CoinPoolOffer(Base):
 
-    coin_id: Mapped[UUID] = mapped_column(ForeignKey("coins.id"), nullable=False)
+    coin_id: Mapped[UUID] = mapped_column(ForeignKey("coins.id", ondelete="CASCADE"), nullable=False)
     coin: Mapped["Coin"] = relationship("Coin", back_populates="pools", lazy="joined")  # coin with can_delete=False
 
     pool_id: Mapped[UUID] = mapped_column(ForeignKey("pools.id", ondelete="CASCADE"), nullable=False)
     pool: Mapped["Pool"] = relationship("Pool", back_populates="coin_pool_offers", lazy="joined")
 
-    chain_id: Mapped[UUID] = mapped_column(ForeignKey("chains.id"), nullable=False)
+    chain_id: Mapped[UUID] = mapped_column(ForeignKey("chains.id", ondelete="CASCADE"), nullable=False)
     chain: Mapped["Chain"] = relationship("Chain", lazy="joined")  # chain with can_delete=False
 
     apr: Mapped[float] = mapped_column(Float, nullable=False)

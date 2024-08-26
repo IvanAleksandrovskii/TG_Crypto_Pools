@@ -8,7 +8,7 @@ coin_chain = Table(
     'coin_chain',
     Base.metadata,
     Column('id', Integer, primary_key=True, autoincrement=True),
-    Column('coin_id', UUID(as_uuid=True), ForeignKey('coins.id'), nullable=False),
-    Column('chain_id', UUID(as_uuid=True), ForeignKey('chains.id'), nullable=False),
+    Column('coin_id', UUID(as_uuid=True), ForeignKey('coins.id', ondelete="CASCADE"), nullable=False),
+    Column('chain_id', UUID(as_uuid=True), ForeignKey('chains.id', ondelete="CASCADE"), nullable=False),
     UniqueConstraint('coin_id', 'chain_id', name='uq_coin_chain')
 )

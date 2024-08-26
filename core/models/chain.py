@@ -9,6 +9,7 @@ from core import chain_storage
 
 if TYPE_CHECKING:
     from .coin import Coin
+    from .coin_pool_offer import CoinPoolOffer
 
 
 class Chain(Base):
@@ -21,6 +22,14 @@ class Chain(Base):
         secondary=coin_chain,
         back_populates="chains",
         lazy="selectin",
+        cascade="save-update, merge",
+    )
+
+    coin_pool_offers: Mapped[List["CoinPoolOffer"]] = relationship(
+        "CoinPoolOffer",
+        back_populates="chain",
+        lazy="selectin",
+        cascade="save-update, merge, delete, delete-orphan",
     )
 
     def __repr__(self):

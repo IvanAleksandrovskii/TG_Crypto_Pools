@@ -24,11 +24,13 @@ class Coin(Base):
         secondary=coin_chain,
         back_populates="coins",
         lazy="selectin",
+        cascade="save-update, merge",
     )
     pools: Mapped[List["CoinPoolOffer"]] = relationship(
         "CoinPoolOffer",
         back_populates="coin",
-        lazy="selectin"
+        lazy="selectin",
+        cascade="save-update, merge, delete, delete-orphan",
     )
 
     def __repr__(self):
