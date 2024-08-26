@@ -1,5 +1,6 @@
+from datetime import datetime
 from typing import TYPE_CHECKING
-from sqlalchemy import UUID, ForeignKey, Float, Integer, Boolean, String, UniqueConstraint
+from sqlalchemy import UUID, ForeignKey, Float, Integer, Boolean, String, DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base
@@ -11,9 +12,6 @@ if TYPE_CHECKING:
 
 
 class CoinPoolOffer(Base):
-    __table_args__ = (
-        UniqueConstraint('pool_id', 'chain_id', 'coin_id', 'lock_period', name='uq_pool_chain_coin_lock_period'),
-    )
 
     coin_id: Mapped[UUID] = mapped_column(ForeignKey("coins.id"), nullable=False)
     coin: Mapped["Coin"] = relationship("Coin", back_populates="pools", lazy="joined")  # coin with can_delete=False
@@ -25,7 +23,6 @@ class CoinPoolOffer(Base):
     chain: Mapped["Chain"] = relationship("Chain", lazy="joined")  # chain with can_delete=False
 
     apr: Mapped[float] = mapped_column(Float, nullable=False)
-    previous_apr: Mapped[float] = mapped_column(Float, nullable=True)
 
     amount_from: Mapped[float] = mapped_column(Float, nullable=False)
 
@@ -35,6 +32,12 @@ class CoinPoolOffer(Base):
 
     liquidity_token: Mapped[bool] = mapped_column(Boolean, default=False)  # token liquidity
     liquidity_token_name: Mapped[str] = mapped_column(String, nullable=True)  # name of the liquidity token and other info if needed
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
 
     def __repr__(self):
         return f"CoinPoolOffer(coin='{self.coin.name}', pool='{self.pool.name}', chain='{self.chain.name}', id={self.id})"
