@@ -63,8 +63,6 @@ class SQLAdminConfig(BaseModel):
 
 
 class MediaConfig(BaseModel):
-    root: str = "/app/media"
-    url_prefix: str = "/media"
     coins_path: str = "/app/media/coins"
     pools_path: str = "/app/media/pools"
     chains_path: str = "/app/media/chains"
