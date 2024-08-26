@@ -1,9 +1,13 @@
+from typing import Optional
+
+from pydantic import Field
+
 from .base import BaseResponse
 
 
 class ChainResponse(BaseResponse):
     name: str
-    logo: str
+    logo: Optional[str] = Field(None, )
 
     @classmethod
     def model_validate(cls, obj, **kwargs):

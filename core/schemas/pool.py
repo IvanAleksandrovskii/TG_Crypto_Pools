@@ -1,10 +1,14 @@
+from typing import Optional
+
+from pydantic import Field
+
 from .base import BaseResponse
 
 
 class PoolResponse(BaseResponse):
     name: str
     website_url: str
-    logo: str
+    logo: Optional[str] = Field(None, )
 
     @classmethod
     def model_validate(cls, obj, **kwargs):

@@ -1,4 +1,5 @@
 from datetime import datetime
+from pydantic import Field
 
 from .base import BaseResponse
 from .chain import ChainResponse
@@ -11,10 +12,10 @@ class OfferResponse(BaseResponse):
     pool: PoolResponse
     chain: ChainResponse
 
-    apr: float
-    amount_from: float
-    lock_period_in_days: int
-    pool_share: float
+    apr: float = Field(ge=0, le=100)
+    amount_from: float = Field(ge=0)
+    lock_period_in_days: int = Field(ge=0)
+    pool_share: float = Field(ge=0, le=100)
     liquidity_token: bool
     liquidity_token_name: str
 
