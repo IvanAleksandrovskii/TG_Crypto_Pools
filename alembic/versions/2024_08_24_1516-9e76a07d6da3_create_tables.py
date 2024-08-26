@@ -1,8 +1,8 @@
 """create tables
 
-Revision ID: b25faaab2e63
+Revision ID: 9e76a07d6da3
 Revises: 
-Create Date: 2024-08-19 00:21:58.417430
+Create Date: 2024-08-24 15:16:17.815006
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'b25faaab2e63'
+revision: str = '9e76a07d6da3'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -58,19 +58,18 @@ def upgrade() -> None:
     sa.Column('pool_id', sa.UUID(), nullable=False),
     sa.Column('chain_id', sa.UUID(), nullable=False),
     sa.Column('apr', sa.Float(), nullable=False),
-    sa.Column('previous_apr', sa.Float(), nullable=True),
     sa.Column('amount_from', sa.Float(), nullable=False),
     sa.Column('lock_period', sa.Integer(), nullable=False),
     sa.Column('pool_share', sa.Float(), nullable=False),
     sa.Column('liquidity_token', sa.Boolean(), nullable=False),
     sa.Column('liquidity_token_name', sa.String(), nullable=True),
+    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('id', sa.UUID(), server_default=sa.text('gen_random_uuid()'), nullable=False),
     sa.Column('is_active', sa.Boolean(), nullable=False),
     sa.ForeignKeyConstraint(['chain_id'], ['chains.id'], name=op.f('fk_coin_pool_offers_chain_id_chains')),
     sa.ForeignKeyConstraint(['coin_id'], ['coins.id'], name=op.f('fk_coin_pool_offers_coin_id_coins')),
     sa.ForeignKeyConstraint(['pool_id'], ['pools.id'], name=op.f('fk_coin_pool_offers_pool_id_pools'), ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('id', name=op.f('pk_coin_pool_offers')),
-    sa.UniqueConstraint('pool_id', 'chain_id', 'coin_id', 'lock_period', name='uq_pool_chain_coin_lock_period')
+    sa.PrimaryKeyConstraint('id', name=op.f('pk_coin_pool_offers'))
     )
     # ### end Alembic commands ###
 
