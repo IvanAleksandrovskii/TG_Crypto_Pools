@@ -3,6 +3,7 @@ from sqlalchemy.dialects.postgresql import UUID
 
 from .base import Base
 
+# Many-to-many association table between coins and chains
 coin_chain = Table(
     'coin_chain',
     Base.metadata,
