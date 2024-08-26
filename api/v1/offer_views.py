@@ -1,8 +1,9 @@
-from typing import List
+from datetime import datetime, timedelta, UTC
+from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, func
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import select, func, and_
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -76,12 +77,50 @@ async def get_all_offers(
     return [OfferResponse.model_validate(offer) for offer in offers]
 
 
-@router.get("/{offer_id}", response_model=OfferResponse)
+@router.get("/{offer_id}", response_model=List[OfferResponse])
 async def get_offer_by_id(
     offer_id: UUID,
+    days: Optional[int] = Query(default=None, ge=1, description="Number of days to fetch history"),
     session: AsyncSession = Depends(db_helper.session_getter)
 ):
     try:
+        # Base query first
+        base_query = (
+            select(CoinPoolOffer)
+            .options(
+                joinedload(CoinPoolOffer.coin),
+                joinedload(CoinPoolOffer.pool),
+                joinedload(CoinPoolOffer.chain)
+            )
+            .join(CoinPoolOffer.pool)
+            .join(CoinPoolOffer.coin)
+            .join(CoinPoolOffer.chain)
+            .where(CoinPoolOffer.is_active == True)
+            .where(Pool.is_active == True)
+            .where(Coin.is_active == True)
+            .where(Chain.is_active == True)
+            .filter(CoinPoolOffer.id == offer_id)
+        )
+        result = await session.execute(base_query)
+        base_offer = result.unique().scalar_one_or_none()
+
+        if not base_offer:
+            raise HTTPException(status_code=404, detail="Offer not found")
+
+        # if
+        if days is None:
+            return [OfferResponse.model_validate(base_offer)]
+
+        # If days is not None, get the offer history
+        common_filter = and_(
+            CoinPoolOffer.coin_id == base_offer.coin_id,
+            CoinPoolOffer.pool_id == base_offer.pool_id,
+            CoinPoolOffer.chain_id == base_offer.chain_id,
+            CoinPoolOffer.lock_period == base_offer.lock_period
+        )
+
+        start_date = datetime.now(UTC) - timedelta(days=days)
+
         query = (
             select(CoinPoolOffer)
             .options(
@@ -89,24 +128,30 @@ async def get_offer_by_id(
                 joinedload(CoinPoolOffer.pool),
                 joinedload(CoinPoolOffer.chain)
             )
-            .join(Coin, CoinPoolOffer.coin_id == Coin.id)
-            .join(Pool, CoinPoolOffer.pool_id == Pool.id)
-            .join(Chain, CoinPoolOffer.chain_id == Chain.id)
             .filter(
-                CoinPoolOffer.id == offer_id,
+                common_filter,
+                CoinPoolOffer.created_at >= start_date,
+                # TODO: IT'S A REPEAT CODE, KEEPING FOR DOUBLE CHECKING PURPOSE
                 CoinPoolOffer.is_active == True,
                 Coin.is_active == True,
                 Pool.is_active == True,
                 Chain.is_active == True
             )
+            .order_by(CoinPoolOffer.created_at.desc())
         )
         result = await session.execute(query)
-        offer = result.unique().scalar_one_or_none()
+        offers = result.unique().scalars().all()
+
+        # If no offers found in the specified period, return the base_offer
+        if not offers:
+            return [OfferResponse.model_validate(base_offer)]
+
+        # If offers found in the specified period, return the offers
+        return [OfferResponse.model_validate(offer) for offer in offers]
+
     except SQLAlchemyError as e:
+        logger.exception(f"Database error occurred in get_offer_by_id: {e}")
+        raise HTTPException(status_code=500, detail="Database error occurred")
+    except Exception as e:
         logger.exception(f"Unexpected error occurred in get_offer_by_id: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
-
-    if not offer:
-        raise HTTPException(status_code=404, detail="Offer not found")
-
-    return OfferResponse.model_validate(offer)
