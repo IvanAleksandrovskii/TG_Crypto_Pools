@@ -1,4 +1,6 @@
 from datetime import datetime
+from typing import Optional
+
 from pydantic import Field
 
 from .base import BaseResponse
@@ -17,7 +19,7 @@ class OfferResponse(BaseResponse):
     lock_period: int = Field(ge=0)
     pool_share: float = Field(ge=0, le=100)
     liquidity_token: bool
-    liquidity_token_name: str
+    liquidity_token_name: Optional[str]
 
     created_at: datetime
 

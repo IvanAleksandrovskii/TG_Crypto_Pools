@@ -3,7 +3,7 @@ from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, desc
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -43,7 +43,7 @@ async def get_latest_offers(session: AsyncSession):
     )
 
     query = (
-        select(CoinPoolOffer)
+        CoinPoolOffer.active()
         .join(
             subquery,
             (CoinPoolOffer.coin_id == subquery.c.coin_id) &
@@ -112,7 +112,7 @@ async def get_offer_by_id(
     try:
         # Base query first
         base_query = (
-            select(CoinPoolOffer)
+            CoinPoolOffer.active()
             .options(
                 joinedload(CoinPoolOffer.coin),
                 joinedload(CoinPoolOffer.pool),
@@ -127,8 +127,10 @@ async def get_offer_by_id(
             .where(Chain.is_active == True)
             .filter(CoinPoolOffer.id == offer_id)
         )
+        logger.debug(f"Executing query for offer_id: {offer_id}")
         result = await session.execute(base_query)
         base_offer = result.unique().scalar_one_or_none()
+        logger.debug(f"Query result: {base_offer}")
 
         if not base_offer:
             raise HTTPException(status_code=404, detail="Offer not found")
@@ -148,7 +150,7 @@ async def get_offer_by_id(
         start_date = datetime.now(UTC) - timedelta(days=days)
 
         query = (
-            select(CoinPoolOffer)
+            CoinPoolOffer.active()
             .options(
                 joinedload(CoinPoolOffer.coin),
                 joinedload(CoinPoolOffer.pool),
@@ -175,6 +177,8 @@ async def get_offer_by_id(
         # If offers found in the specified period, return the offers
         return [OfferResponse.model_validate(offer) for offer in offers]
 
+    except HTTPException:
+        raise
     except SQLAlchemyError as e:
         logger.exception(f"Database error occurred in get_offer_by_id: {e}")
         raise HTTPException(status_code=500, detail="Database error occurred")
@@ -185,28 +189,43 @@ async def get_offer_by_id(
 
 @router.get("/max-apr/{coin_id}", response_model=OfferResponse)
 async def get_max_apr_offer(
-        coin_id: UUID,
-        chain_id: Optional[UUID] = Query(None, description="Filter by chain ID"),
-        pool_id: Optional[UUID] = Query(None, description="Filter by pool ID"),
-        session: AsyncSession = Depends(db_helper.session_getter)
+    coin_id: UUID,
+    chain_id: Optional[UUID] = Query(None, description="Filter by chain ID"),
+    pool_id: Optional[UUID] = Query(None, description="Filter by pool ID"),
+    session: AsyncSession = Depends(db_helper.session_getter)
 ):
     try:
-        # Subquery to get the max APR for the given coin
-        max_apr_subquery = (
-            select(func.max(CoinPoolOffer.apr))
-            .where(CoinPoolOffer.coin_id == coin_id)
-            .where(CoinPoolOffer.is_active == True)
-        ).order_by(CoinPoolOffer.created_at.desc())  # To get the latest offer first
-
-        # Add optional filters if provided
-        if chain_id:
-            max_apr_subquery = max_apr_subquery.where(CoinPoolOffer.chain_id == chain_id)
-        if pool_id:
-            max_apr_subquery = max_apr_subquery.where(CoinPoolOffer.pool_id == pool_id)
+        # Subquery for  coin, pool, chain
+        latest_offers_subquery = (
+            select(
+                CoinPoolOffer.coin_id,
+                CoinPoolOffer.pool_id,
+                CoinPoolOffer.chain_id,
+                CoinPoolOffer.lock_period,
+                func.max(CoinPoolOffer.created_at).label("max_created_at")
+            )
+            .group_by(
+                CoinPoolOffer.coin_id,
+                CoinPoolOffer.pool_id,
+                CoinPoolOffer.chain_id,
+                CoinPoolOffer.lock_period
+            )
+            .subquery()
+        )
 
         # Main query
         query = (
             select(CoinPoolOffer)
+            .join(
+                latest_offers_subquery,
+                and_(
+                    CoinPoolOffer.coin_id == latest_offers_subquery.c.coin_id,
+                    CoinPoolOffer.pool_id == latest_offers_subquery.c.pool_id,
+                    CoinPoolOffer.chain_id == latest_offers_subquery.c.chain_id,
+                    CoinPoolOffer.lock_period == latest_offers_subquery.c.lock_period,
+                    CoinPoolOffer.created_at == latest_offers_subquery.c.max_created_at
+                )
+            )
             .options(
                 joinedload(CoinPoolOffer.coin),
                 joinedload(CoinPoolOffer.pool),
@@ -215,19 +234,21 @@ async def get_max_apr_offer(
             .join(Coin)
             .join(Pool)
             .join(Chain)
-            .where(CoinPoolOffer.coin_id == coin_id)
-            .where(CoinPoolOffer.apr == max_apr_subquery.scalar_subquery())
-            .where(CoinPoolOffer.is_active == True)
-            .where(Coin.is_active == True)
-            .where(Pool.is_active == True)
-            .where(Chain.is_active == True)
+            .filter(CoinPoolOffer.coin_id == coin_id)
+            .filter(CoinPoolOffer.is_active == True)
+            .filter(Coin.is_active == True)
+            .filter(Pool.is_active == True)
+            .filter(Chain.is_active == True)
         )
 
-        # Add optional filters if provided
+        # Add filters based on provided query parameters
         if chain_id:
-            query = query.where(CoinPoolOffer.chain_id == chain_id)
+            query = query.filter(CoinPoolOffer.chain_id == chain_id)
         if pool_id:
-            query = query.where(CoinPoolOffer.pool_id == pool_id)
+            query = query.filter(CoinPoolOffer.pool_id == pool_id)
+
+        # Sort by APR descending
+        query = query.order_by(desc(CoinPoolOffer.apr)).limit(1)
 
         result = await session.execute(query)
         offer = result.unique().scalar_one_or_none()
