@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, UTC
-from typing import List, Optional, Union
+from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -10,7 +10,10 @@ from sqlalchemy.orm import joinedload
 
 from core import logger
 from core.models import db_helper, CoinPoolOffer, Coin, Pool, Chain
-from core.schemas import OfferResponse, OfferResponseWithHistory, OfferHistory
+from core.schemas import (
+    OfferResponse, OfferResponseWithHistory, OfferHistory,
+    PoolResponse, ChainResponse, CoinResponse,
+)
 from utils import Ordering
 
 router = APIRouter()
@@ -103,7 +106,7 @@ async def get_all_offers(
     return [OfferResponse.model_validate(offer) for offer in offers]
 
 
-@router.get("/{offer_id}", response_model=Union[OfferResponse, OfferResponseWithHistory])
+@router.get("/{offer_id}", response_model=OfferResponseWithHistory)
 async def get_offer_by_id(
     offer_id: UUID,
     days: Optional[int] = Query(default=None, ge=1, description="Number of days to fetch history"),
@@ -133,38 +136,39 @@ async def get_offer_by_id(
             raise HTTPException(status_code=404, detail="Offer not found")
 
         if days is None:
-            return OfferResponse.model_validate(base_offer)
+            # If days is not provided, return only the current offer in history
+            history = [OfferHistory.model_validate(base_offer)]
+        else:
+            # If days is provided, get the offer history
+            start_date = datetime.now(UTC) - timedelta(days=days)
 
-        # If days is provided, get the offer history
-        start_date = datetime.now(UTC) - timedelta(days=days)
-
-        history_query = (
-            select(CoinPoolOffer)
-            .options(
-                joinedload(CoinPoolOffer.coin),
-                joinedload(CoinPoolOffer.pool),
-                joinedload(CoinPoolOffer.chain)
+            history_query = (
+                select(CoinPoolOffer)
+                .options(
+                    joinedload(CoinPoolOffer.coin),
+                    joinedload(CoinPoolOffer.pool),
+                    joinedload(CoinPoolOffer.chain)
+                )
+                .filter(
+                    CoinPoolOffer.coin_id == base_offer.coin_id,
+                    CoinPoolOffer.pool_id == base_offer.pool_id,
+                    CoinPoolOffer.chain_id == base_offer.chain_id,
+                    CoinPoolOffer.lock_period == base_offer.lock_period,
+                    CoinPoolOffer.created_at >= start_date,
+                    CoinPoolOffer.is_active == True,
+                )
+                .order_by(CoinPoolOffer.created_at.desc())
             )
-            .filter(
-                CoinPoolOffer.coin_id == base_offer.coin_id,
-                CoinPoolOffer.pool_id == base_offer.pool_id,
-                CoinPoolOffer.chain_id == base_offer.chain_id,
-                CoinPoolOffer.lock_period == base_offer.lock_period,
-                CoinPoolOffer.created_at >= start_date,
-                CoinPoolOffer.is_active == True,
-            )
-            .order_by(CoinPoolOffer.created_at.desc())
-        )
-        result = await session.execute(history_query)
-        offers = result.unique().scalars().all()
+            result = await session.execute(history_query)
+            offers = result.unique().scalars().all()
 
-        history = [OfferHistory.model_validate(offer) for offer in offers]
+            history = [OfferHistory.model_validate(offer) for offer in offers]
 
         return OfferResponseWithHistory(
             id=base_offer.id,
-            pool=base_offer.pool,
-            chain=base_offer.chain,
-            coin=base_offer.coin,
+            pool=PoolResponse.model_validate(base_offer.pool),
+            chain=ChainResponse.model_validate(base_offer.chain),
+            coin=CoinResponse.model_validate(base_offer.coin),
             lock_period=base_offer.lock_period,
             liquidity_token=base_offer.liquidity_token,
             liquidity_token_name=base_offer.liquidity_token_name,
