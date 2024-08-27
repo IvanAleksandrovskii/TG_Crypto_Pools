@@ -18,6 +18,7 @@ class ChainAdmin(BaseAdminModel, model=Chain):
     column_sortable_list = [Chain.name, Chain.is_active]
     column_searchable_list = [Chain.name]
     column_filters = [Chain.is_active, Chain.name]
+    column_details_list = ['name', 'is_active', 'id', 'logo', 'coins', 'coin_pool_offers']
 
     form_columns = ['name', 'coins', 'is_active', 'logo']
     form_args = {

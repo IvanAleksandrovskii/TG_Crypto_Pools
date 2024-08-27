@@ -14,7 +14,7 @@ from core.admin import async_sqladmin_db_helper
 
 class BaseAdminModel(ModelView):
     column_list = ['id', 'is_active']
-    column_details_list = "__all__"  # TODO: found a way to correct the view?
+    column_details_list = "__all__"
     column_sortable_list = ['id', 'is_active']
     column_searchable_list = ['id']
     column_filters = ['is_active']

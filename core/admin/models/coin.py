@@ -18,6 +18,7 @@ class CoinAdmin(BaseAdminModel, model=Coin):
     column_sortable_list = [Coin.name, Coin.code, Coin.is_active]
     column_searchable_list = [Coin.name, Coin.code]
     column_filters = [Coin.is_active, Coin.name, Coin.code]
+    column_details_list = ['name', 'code', 'is_active', 'id', 'logo', 'chains', 'pools']
 
     form_columns = ['name', 'code', 'chains', 'is_active', 'logo']
     form_args = {

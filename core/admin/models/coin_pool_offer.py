@@ -37,6 +37,11 @@ class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
         CoinPoolOffer.liquidity_token_name, CoinPoolOffer.is_active
     ]
 
+    column_details_list = [
+        'pool', 'chain', 'coin', 'is_active', 'lock_period', 'created_at', 'apr', 'amount_from', 'pool_share',
+        'liquidity_token', 'liquidity_token_name', 'id',
+    ]
+
     form_columns = [
         'pool', 'chain', 'coin', 'apr',
         'amount_from', 'lock_period', 'pool_share',
