@@ -22,9 +22,9 @@ offer_ordering = Ordering(CoinPoolOffer,
                           [
                               "lock_period", "apr", "created_at", "amount_from",
                               "pool_share", "liquidity_token", "liquidity_token_name",
-                              "coin.name", "pool.name", "chain.name", "id",
+                              "coin_id", "pool_id", "chain_id", "id",
                           ],
-                          default_field="apr")
+                          default_field="pool_id")
 
 
 async def get_latest_offers(session: AsyncSession):
