@@ -167,3 +167,65 @@ async def get_offer_by_id(
     except Exception as e:
         logger.exception(f"Unexpected error occurred in get_offer_by_id: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/max-apr/{coin_id}", response_model=OfferResponse)
+async def get_max_apr_offer(
+    coin_id: UUID,
+    chain_id: Optional[UUID] = Query(None, description="Filter by chain ID"),
+    pool_id: Optional[UUID] = Query(None, description="Filter by pool ID"),
+    session: AsyncSession = Depends(db_helper.session_getter)
+):
+    try:
+        # Subquery to get the max APR for the given coin
+        max_apr_subquery = (
+            select(func.max(CoinPoolOffer.apr))
+            .where(CoinPoolOffer.coin_id == coin_id)
+            .where(CoinPoolOffer.is_active == True)
+        ).order_by(CoinPoolOffer.created_at.desc())  # To get the latest offer first
+
+        # Add optional filters if provided
+        if chain_id:
+            max_apr_subquery = max_apr_subquery.where(CoinPoolOffer.chain_id == chain_id)
+        if pool_id:
+            max_apr_subquery = max_apr_subquery.where(CoinPoolOffer.pool_id == pool_id)
+
+        # Main query
+        query = (
+            select(CoinPoolOffer)
+            .options(
+                joinedload(CoinPoolOffer.coin),
+                joinedload(CoinPoolOffer.pool),
+                joinedload(CoinPoolOffer.chain)
+            )
+            .join(Coin)
+            .join(Pool)
+            .join(Chain)
+            .where(CoinPoolOffer.coin_id == coin_id)
+            .where(CoinPoolOffer.apr == max_apr_subquery.scalar_subquery())
+            .where(CoinPoolOffer.is_active == True)
+            .where(Coin.is_active == True)
+            .where(Pool.is_active == True)
+            .where(Chain.is_active == True)
+        )
+
+        # Add optional filters if provided
+        if chain_id:
+            query = query.where(CoinPoolOffer.chain_id == chain_id)
+        if pool_id:
+            query = query.where(CoinPoolOffer.pool_id == pool_id)
+
+        result = await session.execute(query)
+        offer = result.unique().scalar_one_or_none()
+
+        if not offer:
+            raise HTTPException(status_code=404, detail="No matching offer found")
+
+        return OfferResponse.model_validate(offer)
+
+    except SQLAlchemyError as e:
+        logger.exception(f"Database error occurred in get_max_apr_offer: {e}")
+        raise HTTPException(status_code=500, detail="Database error occurred")
+    except Exception as e:
+        logger.exception(f"Unexpected error occurred in get_max_apr_offer: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
