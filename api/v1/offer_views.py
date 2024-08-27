@@ -258,6 +258,8 @@ async def get_max_apr_offer(
 
         return OfferResponse.model_validate(offer)
 
+    except HTTPException:
+        raise
     except SQLAlchemyError as e:
         logger.exception(f"Database error occurred in get_max_apr_offer: {e}")
         raise HTTPException(status_code=500, detail="Database error occurred")
