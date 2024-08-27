@@ -12,7 +12,7 @@ from utils import Ordering
 
 router = APIRouter()
 
-pool_ordering = Ordering(Pool, ["name"], default_field="name")
+pool_ordering = Ordering(Pool, ["name", "id"], default_field="name")
 
 
 @router.get("/", response_model=List[PoolResponse])

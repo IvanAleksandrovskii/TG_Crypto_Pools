@@ -12,7 +12,7 @@ from utils import Ordering
 
 router = APIRouter()
 
-coin_ordering = Ordering(Coin, ["name", "code"], default_field="name")
+coin_ordering = Ordering(Coin, ["name", "code", "id"], default_field="name")
 
 
 @router.get("/", response_model=List[CoinResponse])

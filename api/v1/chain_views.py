@@ -12,7 +12,7 @@ from utils import Ordering
 
 router = APIRouter()
 
-chain_ordering = Ordering(Chain, ["name"], default_field="name")
+chain_ordering = Ordering(Chain, ["name", "id"], default_field="name")
 
 
 @router.get("/", response_model=List[ChainResponse])
