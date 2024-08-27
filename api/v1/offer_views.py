@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, UTC
-from typing import List, Optional
+from typing import List, Optional, Union
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -10,7 +10,7 @@ from sqlalchemy.orm import joinedload
 
 from core import logger
 from core.models import db_helper, CoinPoolOffer, Coin, Pool, Chain
-from core.schemas import OfferResponse
+from core.schemas import OfferResponse, OfferResponseWithHistory, OfferHistory
 from utils import Ordering
 
 router = APIRouter()
@@ -103,11 +103,11 @@ async def get_all_offers(
     return [OfferResponse.model_validate(offer) for offer in offers]
 
 
-@router.get("/{offer_id}", response_model=List[OfferResponse])  # One and history
+@router.get("/{offer_id}", response_model=Union[OfferResponse, OfferResponseWithHistory])
 async def get_offer_by_id(
-        offer_id: UUID,
-        days: Optional[int] = Query(default=None, ge=1, description="Number of days to fetch history"),
-        session: AsyncSession = Depends(db_helper.session_getter)
+    offer_id: UUID,
+    days: Optional[int] = Query(default=None, ge=1, description="Number of days to fetch history"),
+    session: AsyncSession = Depends(db_helper.session_getter)
 ):
     try:
         # Base query first
@@ -121,61 +121,55 @@ async def get_offer_by_id(
             .join(CoinPoolOffer.pool)
             .join(CoinPoolOffer.coin)
             .join(CoinPoolOffer.chain)
-            .where(CoinPoolOffer.is_active == True)
             .where(Pool.is_active == True)
             .where(Coin.is_active == True)
             .where(Chain.is_active == True)
             .filter(CoinPoolOffer.id == offer_id)
         )
-        logger.debug(f"Executing query for offer_id: {offer_id}")
         result = await session.execute(base_query)
         base_offer = result.unique().scalar_one_or_none()
-        logger.debug(f"Query result: {base_offer}")
 
         if not base_offer:
             raise HTTPException(status_code=404, detail="Offer not found")
 
-        # if
         if days is None:
-            return [OfferResponse.model_validate(base_offer)]
+            return OfferResponse.model_validate(base_offer)
 
-        # If days is not None, get the offer history
-        common_filter = and_(
-            CoinPoolOffer.coin_id == base_offer.coin_id,
-            CoinPoolOffer.pool_id == base_offer.pool_id,
-            CoinPoolOffer.chain_id == base_offer.chain_id,
-            CoinPoolOffer.lock_period == base_offer.lock_period
-        )
-
+        # If days is provided, get the offer history
         start_date = datetime.now(UTC) - timedelta(days=days)
 
-        query = (
-            CoinPoolOffer.active()
+        history_query = (
+            select(CoinPoolOffer)
             .options(
                 joinedload(CoinPoolOffer.coin),
                 joinedload(CoinPoolOffer.pool),
                 joinedload(CoinPoolOffer.chain)
             )
             .filter(
-                common_filter,
+                CoinPoolOffer.coin_id == base_offer.coin_id,
+                CoinPoolOffer.pool_id == base_offer.pool_id,
+                CoinPoolOffer.chain_id == base_offer.chain_id,
+                CoinPoolOffer.lock_period == base_offer.lock_period,
                 CoinPoolOffer.created_at >= start_date,
-                # TODO: IT'S A REPEAT CODE, KEEPING FOR DOUBLE CHECKING PURPOSE
                 CoinPoolOffer.is_active == True,
-                Coin.is_active == True,
-                Pool.is_active == True,
-                Chain.is_active == True
             )
             .order_by(CoinPoolOffer.created_at.desc())
         )
-        result = await session.execute(query)
+        result = await session.execute(history_query)
         offers = result.unique().scalars().all()
 
-        # If no offers found in the specified period, return the base_offer
-        if not offers:
-            return [OfferResponse.model_validate(base_offer)]
+        history = [OfferHistory.model_validate(offer) for offer in offers]
 
-        # If offers found in the specified period, return the offers
-        return [OfferResponse.model_validate(offer) for offer in offers]
+        return OfferResponseWithHistory(
+            id=base_offer.id,
+            pool=base_offer.pool,
+            chain=base_offer.chain,
+            coin=base_offer.coin,
+            lock_period=base_offer.lock_period,
+            liquidity_token=base_offer.liquidity_token,
+            liquidity_token_name=base_offer.liquidity_token_name,
+            history=history
+        )
 
     except HTTPException:
         raise
