@@ -1,22 +1,27 @@
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core import logger
 from core.models import db_helper, Pool
 from core.schemas import PoolResponse
+from utils import Ordering
 
 router = APIRouter()
+
+pool_ordering = Ordering(Pool, ["name"], default_field="name")
 
 
 @router.get("/", response_model=List[PoolResponse])
 async def get_all_pools(
-    session: AsyncSession = Depends(db_helper.session_getter)
+    session: AsyncSession = Depends(db_helper.session_getter),
+    order: Optional[str] = Query(None, description="Order by field"),
+    order_desc: Optional[bool] = Query(None, description="Order in descending order")
 ):
-    query = Pool.active()
+    query = Pool.active().order_by(pool_ordering.order_by(order, order_desc))
     try:
         result = await session.execute(query)
         pools = result.scalars().all()

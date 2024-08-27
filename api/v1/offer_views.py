@@ -11,8 +11,17 @@ from sqlalchemy.orm import joinedload
 from core import logger
 from core.models import db_helper, CoinPoolOffer, Coin, Pool, Chain
 from core.schemas import OfferResponse
+from utils import Ordering
 
 router = APIRouter()
+
+offer_ordering = Ordering(CoinPoolOffer,
+                          [
+                              "lock_period", "apr", "created_at", "amount_from",
+                              "pool_share", "liquidity_token", "liquidity_token_name",
+                              "coin.name", "pool.name", "chain.name", "id",
+                          ],
+                          default_field="id")
 
 
 async def get_latest_offers(session: AsyncSession):
@@ -64,10 +73,12 @@ async def get_latest_offers(session: AsyncSession):
 
 @router.get("/", response_model=List[OfferResponse])
 async def get_all_offers(
-    coin_id: Optional[UUID] = Query(None, description="Filter by coin ID"),
-    chain_id: Optional[UUID] = Query(None, description="Filter by chain ID"),
-    pool_id: Optional[UUID] = Query(None, description="Filter by pool ID"),
-    session: AsyncSession = Depends(db_helper.session_getter)
+        coin_id: Optional[UUID] = Query(None, description="Filter by coin ID"),
+        chain_id: Optional[UUID] = Query(None, description="Filter by chain ID"),
+        pool_id: Optional[UUID] = Query(None, description="Filter by pool ID"),
+        session: AsyncSession = Depends(db_helper.session_getter),
+        order: Optional[str] = Query(None, description="Order by field"),
+        order_desc: Optional[bool] = Query(None, description="Order in descending order")
 ):
     try:
         query = await get_latest_offers(session)
@@ -80,6 +91,9 @@ async def get_all_offers(
         if pool_id:
             query = query.filter(CoinPoolOffer.pool_id == pool_id)
 
+        # Apply ordering
+        query = query.order_by(offer_ordering.order_by(order, order_desc))
+
         result = await session.execute(query)
         offers = result.unique().scalars().all()
     except SQLAlchemyError as e:
@@ -91,9 +105,9 @@ async def get_all_offers(
 
 @router.get("/{offer_id}", response_model=List[OfferResponse])  # One and history
 async def get_offer_by_id(
-    offer_id: UUID,
-    days: Optional[int] = Query(default=None, ge=1, description="Number of days to fetch history"),
-    session: AsyncSession = Depends(db_helper.session_getter)
+        offer_id: UUID,
+        days: Optional[int] = Query(default=None, ge=1, description="Number of days to fetch history"),
+        session: AsyncSession = Depends(db_helper.session_getter)
 ):
     try:
         # Base query first
@@ -171,10 +185,10 @@ async def get_offer_by_id(
 
 @router.get("/max-apr/{coin_id}", response_model=OfferResponse)
 async def get_max_apr_offer(
-    coin_id: UUID,
-    chain_id: Optional[UUID] = Query(None, description="Filter by chain ID"),
-    pool_id: Optional[UUID] = Query(None, description="Filter by pool ID"),
-    session: AsyncSession = Depends(db_helper.session_getter)
+        coin_id: UUID,
+        chain_id: Optional[UUID] = Query(None, description="Filter by chain ID"),
+        pool_id: Optional[UUID] = Query(None, description="Filter by pool ID"),
+        session: AsyncSession = Depends(db_helper.session_getter)
 ):
     try:
         # Subquery to get the max APR for the given coin

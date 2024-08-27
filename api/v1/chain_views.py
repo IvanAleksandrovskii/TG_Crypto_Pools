@@ -1,22 +1,27 @@
-from typing import List
+from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core import logger
 from core.models import db_helper, Chain
 from core.schemas import ChainResponse
+from utils import Ordering
 
 router = APIRouter()
+
+chain_ordering = Ordering(Chain, ["name"], default_field="name")
 
 
 @router.get("/", response_model=List[ChainResponse])
 async def get_all_chains(
-    session: AsyncSession = Depends(db_helper.session_getter)
+    session: AsyncSession = Depends(db_helper.session_getter),
+    order: Optional[str] = Query(None, description="Order by field"),
+    order_desc: Optional[bool] = Query(None, description="Order in descending order")
 ):
-    query = Chain.active()
+    query = Chain.active().order_by(chain_ordering.order_by(order, order_desc))
     try:
         result = await session.execute(query)
         chains = result.scalars().all()
