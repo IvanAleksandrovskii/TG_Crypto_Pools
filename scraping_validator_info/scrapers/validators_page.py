@@ -5,11 +5,13 @@ from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
+
 import pandas as pd
 
-from core import settings
 from scraping_validator_info import logger
 from scraping_validator_info.scrapers import BaseScraper
+
+from core import settings
 
 
 class ValidatorDataScraper(BaseScraper):

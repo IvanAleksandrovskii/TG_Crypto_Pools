@@ -1,10 +1,14 @@
 import os
+
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
+
 import pandas as pd
+
 from scraping_validator_info.scrapers import BaseScraper
 from scraping_validator_info import logger
+
 from core import settings
 
 

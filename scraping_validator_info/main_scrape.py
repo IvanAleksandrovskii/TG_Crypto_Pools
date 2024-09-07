@@ -1,10 +1,11 @@
 import glob
 import os
 
-from core import settings
 from scraping_validator_info.scrapers import MainPageScraper, ValidatorDataScraper, ValidatorExternalLinksScraper, \
     ValidatorLinkAndImageScraper
 from scraping_validator_info import logger
+
+from core import settings
 
 
 def cleanup_chrome_processes():
