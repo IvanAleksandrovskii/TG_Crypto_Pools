@@ -1,22 +1,22 @@
-import psutil
-import signal
+import glob
 import os
 
 from core import settings
-from scraping_validator_info.scrapers import MainPageScraper, ValidatorDataScraper, ValidatorLinkAndImageScraper
-
+from scraping_validator_info.scrapers import MainPageScraper, ValidatorDataScraper, ValidatorExternalLinksScraper, \
+    ValidatorLinkAndImageScraper
 from scraping_validator_info import logger
 
 
 def cleanup_chrome_processes():
+    import psutil
+    import signal
     for proc in psutil.process_iter(['pid', 'name']):
-        # Check if any chrome processes
-        if 'chrome' in proc.info['name'].lower():  # warning: ignore
+        if 'chrome' in proc.info['name'].lower():
             try:
                 os.kill(proc.info['pid'], signal.SIGTERM)
-                logger.info(f"Terminated Chrome process: {proc.info['pid']}")  # warning: ignore
+                logger.info(f"Terminated Chrome process: {proc.info['pid']}")
             except Exception as e:
-                logger.error(f"Failed to terminate Chrome process {proc.info['pid']}: {e}")  # warning: ignore
+                logger.error(f"Failed to terminate Chrome process {proc.info['pid']}: {e}")
 
 
 def scrape_validator_info():
@@ -28,47 +28,65 @@ def scrape_validator_info():
     settings.scraper_validator_info.ensure_dir(settings.scraper_validator_info.link_dir)
 
     urls = [
-        "https://validator.info/lava",
+        # "https://validator.info/lava",
         "https://validator.info/dydx",
         # "https://validator.info/cronos-pos",
         # "https://validator.info/celestia",
         # "https://validator.info/terra-classic",
         # "https://validator.info/dymension",
         # "https://validator.info/saga",
-        # "https://validator.info/haqq",
+        "https://validator.info/haqq",
         # "https://validator.info/coreum",
         # "https://validator.info/nolus",
         # "https://validator.info/polygon",
     ]
 
-    # Main Page Scraper
-    main_page_scraper = MainPageScraper(["https://validator.info"])
     try:
-        main_page_content = main_page_scraper.scrape_main_page()
-        data = main_page_scraper.extract_data_from_main_page(main_page_content)
-        main_page_scraper.create_csv_from_main_page(data)
-    except Exception as e:
-        logger.exception(f"Error scraping main validator.info page: {e}")
-
-    # Validators Page Scraper
-    validators_page_scraper = ValidatorDataScraper(urls)
-    for url in validators_page_scraper.urls:
-        logger.info(f"Processing validators for {url}...")
+        # Main Page Scraper
+        main_page_scraper = MainPageScraper(["https://validator.info"])
         try:
-            df = validators_page_scraper.scrape_validator_data(url)
-            ValidatorDataScraper.save_to_csv(df, url)
-            logger.info(f"Successfully processed {url}")
+            main_page_content = main_page_scraper.scrape_main_page()
+            data = main_page_scraper.extract_data_from_main_page(main_page_content)
+            main_page_scraper.create_csv_from_main_page(data)
         except Exception as e:
-            logger.exception(f"Error scraping {url}: {str(e)}")
+            logger.exception(f"Error scraping main validator.info page: {e}")
 
-    # Inner link and image link scraper
-    link_and_image_scraper = ValidatorLinkAndImageScraper(validators_page_scraper.urls)
-    try:
-        logger.info("Starting the scraping process for links and image sources...")
-        link_and_image_scraper.scrape_validator_links_and_images()
-        logger.info("Scraping process for links and image sources completed successfully.")
-    except Exception as e:
-        logger.exception(f"Error scraping links and images links: {e}")
+        # Validators Page Scraper
+        validators_page_scraper = ValidatorDataScraper(urls)
+        for url in validators_page_scraper.urls:
+            logger.info(f"Processing validators for {url}...")
+            try:
+                df = validators_page_scraper.scrape_validator_data(url)
+                ValidatorDataScraper.save_to_csv(df, url)
+                logger.info(f"Successfully processed {url}")
+            except Exception as e:
+                logger.exception(f"Error scraping {url}: {str(e)}")
+
+        # Link and Image Scraper
+        link_and_image_scraper = ValidatorLinkAndImageScraper(urls)
+        try:
+            link_and_image_scraper.scrape_validator_links_and_images()
+        except Exception as e:
+            logger.exception(f"Error scraping links and images: {e}")
+
+        # External Links Scraper
+        external_links_scraper = ValidatorExternalLinksScraper()
+        try:
+            logger.info("Starting the scraping process for external links...")
+            success = external_links_scraper.scrape_external_links()
+            if success:
+                logger.info("Scraping process for external links completed successfully.")
+            else:
+                logger.warning("Scraping process for external links completed with issues.")
+        except Exception as e:
+            logger.exception(f"Error scraping external links: {e}")
+
+        # Check for processed files
+        logger.info("Checking for processed files...")
+        processed_files = glob.glob(os.path.join(settings.scraper_validator_info.processed_data_dir, "*.csv"))
+        logger.info(f"Found {len(processed_files)} processed files.")
+        for file in processed_files:
+            logger.info(f"Processed file: {file}")
 
     finally:
         cleanup_chrome_processes()

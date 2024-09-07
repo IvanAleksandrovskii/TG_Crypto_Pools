@@ -16,7 +16,7 @@ from core import settings
 
 class MainPageScraper(BaseScraper):
     def scrape_main_page(self):
-        logger.info("Starting to scrape validator.info scrape_validator_info page...")
+        logger.info("Starting to scrape validator.info main page...")
         with self.get_driver() as driver:
             try:
                 driver.get(self.urls[0])

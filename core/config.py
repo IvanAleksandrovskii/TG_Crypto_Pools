@@ -69,12 +69,44 @@ class MediaConfig(BaseModel):
     allowed_image_extensions: List[str] = ['.jpg', '.jpeg', '.png', '.gif', '.svg']
 
 
+class ChromeConfig:
+    path: str = os.path.abspath("/usr/local/bin/chromedriver")
+
+
+class ScraperConfigValidatorInfo:
+    base_dir: str = os.path.join(os.getcwd(), "collected_data")
+    main_page_dir: str = os.path.join(base_dir, "main_page")
+    validator_data_dir: str = os.path.join(base_dir, "validator_data")
+    link_dir: str = os.path.join(base_dir, "links")
+    processed_data_dir: str = os.path.join(base_dir, "processed_data")
+    processed_offers_by_chains_dir: str = os.path.join(processed_data_dir, "offers_by_chains")
+
+    @staticmethod
+    def ensure_dir(directory):
+        """Ensure that a directory exists, creating it if necessary."""
+        os.makedirs(directory, exist_ok=True)
+
+    @staticmethod
+    def get_chain_name(url):
+        """Extract the chain name from a URL."""
+        return url.split('/')[-1]
+
+    @staticmethod
+    def get_file_path(base_dir, chain_name, filename):
+        """Get the full file path for a given chain and filename."""
+        if chain_name:
+            return os.path.join(base_dir, chain_name, filename)
+        return os.path.join(base_dir, filename)
+
+
 class Settings(BaseSettings):
     run: RunConfig = RunConfig()
     db: DBConfig = DBConfig()
     api: APIConfig = APIConfig()
     admin_panel: SQLAdminConfig = SQLAdminConfig()
     media: MediaConfig = MediaConfig()
+    chrome: ChromeConfig = ChromeConfig()
+    scraper_validator_info: ScraperConfigValidatorInfo = ScraperConfigValidatorInfo()
 
 
 settings = Settings()

@@ -6,6 +6,20 @@ RUN apt-get update && apt-get install -y libpq-dev
 # Installing netcat
 RUN apt-get update && apt-get install -y netcat-openbsd
 
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg \
+    curl \
+    unzip
+
+# Install Google Chrome
+RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google-chrome-archive-keyring.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome-archive-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | tee /etc/apt/sources.list.d/google-chrome.list > /dev/null \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable
+
+
 # Create a working directory
 WORKDIR /app
 
