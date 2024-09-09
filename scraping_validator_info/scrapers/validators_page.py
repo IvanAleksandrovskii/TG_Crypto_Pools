@@ -21,7 +21,7 @@ class ValidatorDataScraper(BaseScraper):
             with self.get_driver() as driver:
                 try:
                     driver.get(url)
-                    time.sleep(10)
+                    time.sleep(3)
 
                     WebDriverWait(driver, 30).until(
                         ec.presence_of_element_located((By.CLASS_NAME, "el-DataListRow"))

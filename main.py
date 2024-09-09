@@ -20,7 +20,7 @@ ic.disable()
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # not used: ignore
     # Startup
     logger.info("Starting up the FastAPI application...")
 
@@ -84,7 +84,7 @@ class NoFaviconFilter(logging.Filter):
 logging.getLogger("uvicorn.access").addFilter(NoFaviconFilter())
 
 if __name__ == '__main__':
-    uvicorn.run(ic("main:main_app"),
+    uvicorn.run("main:main_app",
                 host=ic(settings.run.host),
                 port=ic(settings.run.port),
                 reload=ic(settings.run.debug),

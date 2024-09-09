@@ -77,9 +77,7 @@ class ScraperConfigValidatorInfo:
     base_dir: str = os.path.join(os.getcwd(), "collected_data")
     main_page_dir: str = os.path.join(base_dir, "main_page")
     validator_data_dir: str = os.path.join(base_dir, "validator_data")
-    link_dir: str = os.path.join(base_dir, "links")
     processed_data_dir: str = os.path.join(base_dir, "processed_data")
-    processed_offers_by_chains_dir: str = os.path.join(processed_data_dir, "offers_by_chains")
 
     @staticmethod
     def ensure_dir(directory):

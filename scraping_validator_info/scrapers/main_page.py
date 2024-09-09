@@ -8,7 +8,7 @@ from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
 
-from scraping_validator_info.scrapers import BaseScraper
+from .base import BaseScraper
 from scraping_validator_info import logger
 
 from core import settings
@@ -40,11 +40,24 @@ class MainPageScraper(BaseScraper):
         if match:
             json_data = match.group(1) + "]"
             json_data = json_data.replace("'", '"').replace('\\"', '"').strip()
+            logger.debug(f"Extracted JSON data: {json_data[:500]}...")  # Log first 500 characters
             try:
-                data = json.loads(json_data)
-            except json.JSONDecodeError as e:
-                logger.exception(f"Error decoding JSON for regular blockchains: {str(e)}")
+                parsed_data = json.loads(json_data)
+                logger.debug(f"Parsed data type: {type(parsed_data)}")
+                logger.debug(
+                    f"Parsed data (first item): {parsed_data[0] if isinstance(parsed_data, list) and parsed_data else 'Empty or not a list'}")
 
+                if isinstance(parsed_data, list):
+                    data = parsed_data
+                else:
+                    logger.error("Parsed data is not a list as expected")
+            except json.JSONDecodeError as e:
+                logger.error(f"Error decoding JSON: {str(e)}")
+                logger.debug(f"Problematic JSON string: {json_data}")
+        else:
+            logger.error("No match found for blockchain data in body content")
+
+        logger.info(f"Extracted {len(data)} items from main page")
         return data
 
     @staticmethod
