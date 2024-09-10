@@ -11,6 +11,8 @@ from core.admin.models.base import BaseAdminModel
 from core.models import CoinPoolOffer, Coin, Pool, Chain
 
 
+# TODO: Update model
+
 class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
     column_list = [
         'pool', 'chain', 'coin', CoinPoolOffer.created_at, CoinPoolOffer.is_active,

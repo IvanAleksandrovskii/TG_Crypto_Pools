@@ -22,6 +22,9 @@ class Pool(Base):
     )
     website_url: Mapped[str] = mapped_column(String, nullable=True)
 
+    # TODO: Add identification how (from where) offers for this pool are taken (like validator.info, defilama or etc.)
+    parsing_source: Mapped[str] = mapped_column(String, nullable=True)
+
     def __repr__(self):
         return f"Pool(name='{self.name}', id={self.id})"
 

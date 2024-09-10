@@ -9,6 +9,8 @@ from core import logger, pool_storage
 from .base import BaseAdminModel
 
 
+# TODO: Update model
+
 class PoolAdmin(BaseAdminModel, model=Pool):
     column_list = [Pool.name, Pool.is_active, Pool.website_url, Pool.id, Pool.logo]
     column_sortable_list = [Pool.name, Pool.is_active]

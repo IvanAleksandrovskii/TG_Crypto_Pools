@@ -14,21 +14,23 @@ if TYPE_CHECKING:
 class CoinPoolOffer(Base):
 
     coin_id: Mapped[UUID] = mapped_column(ForeignKey("coins.id", ondelete="CASCADE"), nullable=False)
-    coin: Mapped["Coin"] = relationship("Coin", back_populates="pools", lazy="joined")  # coin with can_delete=False
+    coin: Mapped["Coin"] = relationship("Coin", back_populates="pools", lazy="joined")
 
     pool_id: Mapped[UUID] = mapped_column(ForeignKey("pools.id", ondelete="CASCADE"), nullable=False)
     pool: Mapped["Pool"] = relationship("Pool", back_populates="coin_pool_offers", lazy="joined")
 
     chain_id: Mapped[UUID] = mapped_column(ForeignKey("chains.id", ondelete="CASCADE"), nullable=False)
-    chain: Mapped["Chain"] = relationship("Chain", lazy="joined")  # chain with can_delete=False
+    chain: Mapped["Chain"] = relationship("Chain", lazy="joined")
 
     apr: Mapped[float] = mapped_column(Float, nullable=False)
 
-    amount_from: Mapped[float] = mapped_column(Float, nullable=False)
+    # TODO: add fee
 
-    lock_period: Mapped[int] = mapped_column(Integer, nullable=False)  # days
+    amount_from: Mapped[float] = mapped_column(Float, nullable=False)  # TODO: make nullable
 
-    pool_share: Mapped[float] = mapped_column(Float, nullable=False)  # share in pool
+    lock_period: Mapped[int] = mapped_column(Integer, nullable=False)  # days TODO: make nullable
+
+    pool_share: Mapped[float] = mapped_column(Float, nullable=False)  # share in pool TODO: make nullable
 
     liquidity_token: Mapped[bool] = mapped_column(Boolean, default=False)  # token liquidity
     liquidity_token_name: Mapped[str] = mapped_column(String, nullable=True)  # name of the liquidity token and other info if needed
