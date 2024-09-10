@@ -1,4 +1,6 @@
 import re
+import os
+import sys
 from typing import Dict, List
 
 import pandas as pd
@@ -6,7 +8,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.models import Pool
-from scraping import logger
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from scraping.logger import logger
 
 
 async def get_existing_pools_validator_info(session: AsyncSession) -> Dict[str, Pool]:

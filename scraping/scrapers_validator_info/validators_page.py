@@ -70,7 +70,7 @@ class ValidatorDataScraper(BaseScraper):
         df = pd.DataFrame(data, columns=headers)
 
         for col in df.columns:
-            if col == "Validator" or col == "Operator":
+            if col == "Validator":
                 df[col] = df[col].apply(self._clean_validator_name)
             else:
                 df[col] = df[col].apply(lambda x: self._clean_numeric_value(x, col))
@@ -81,19 +81,3 @@ class ValidatorDataScraper(BaseScraper):
         df = df.loc[:, (df != '').any(axis=0)]
 
         return df
-
-    # @staticmethod
-    # def save_to_csv(df, url):
-    #     config = settings.scraper_validator_info
-    #     chain_name = config.get_chain_name(url)
-    #     filename = f"{chain_name}_validators.csv"
-    #     file_path = config.get_file_path(config.validator_data_dir, None, filename)
-    #
-    #     config.ensure_dir(os.path.dirname(file_path))
-    #
-    #     logger.debug("Columns in DataFrame:")
-    #     for i, col in enumerate(df.columns):
-    #         logger.debug(f"{i}: {col}")
-    #
-    #     df.to_csv(file_path, index=False)
-    #     logger.info(f"Data saved to file: {file_path}")

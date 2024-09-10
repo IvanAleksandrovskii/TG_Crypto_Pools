@@ -16,7 +16,7 @@ class MainPageScraper(BaseScraper):
         with self.get_driver() as driver:
             try:
                 driver.get(self.urls[0])
-                time.sleep(5)
+                time.sleep(1)
 
                 WebDriverWait(driver, 20).until(
                     ec.presence_of_element_located((By.TAG_NAME, "body"))

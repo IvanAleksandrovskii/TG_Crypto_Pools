@@ -75,32 +75,6 @@ class ValidatorLinkAndImageScraper(BaseScraper):
         logger.info("Finished scraping links and images for new validators")
         return result
 
-    # def download_image(self, img_src, validator_name, chain_name):
-    #     try:
-    #         response = requests.get(img_src, stream=True)
-    #         if response.status_code == 200:
-    #             file_extension = os.path.splitext(urlparse(img_src).path)[1]
-    #             if not file_extension:
-    #                 file_extension = '.png'  # Default to .png if no extension is found
-    #
-    #             filename = f"{validator_name}{file_extension}"
-    #             filepath = os.path.join(settings.media.pools_path, filename)
-    #
-    #             os.makedirs(os.path.dirname(filepath), exist_ok=True)
-    #
-    #             with open(filepath, 'wb') as f:
-    #                 for chunk in response.iter_content(1024):
-    #                     f.write(chunk)
-    #
-    #             logger.info(f"Image downloaded for {validator_name} at {filepath}")
-    #             return filepath
-    #         else:
-    #             logger.error(f"Failed to download image for {validator_name}: HTTP {response.status_code}")
-    #             return ""
-    #     except Exception as e:
-    #         logger.error(f"Error downloading image for {validator_name}: {str(e)}")
-    #         return ""
-
     def download_image(self, img_src, validator_name, chain_name):
         try:
             response = requests.get(img_src, stream=True)

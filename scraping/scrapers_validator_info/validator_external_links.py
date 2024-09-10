@@ -21,7 +21,7 @@ class ValidatorExternalLinksScraper(BaseScraper):
 
                 try:
                     driver.get(internal_link)
-                    WebDriverWait(driver, 30).until(
+                    WebDriverWait(driver, 10).until(
                         ec.presence_of_element_located((By.CLASS_NAME, "el-BlockchainAgentExternalLink"))
                     )
 

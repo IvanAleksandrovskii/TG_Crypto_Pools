@@ -6,19 +6,23 @@ import sys
 import os
 import io
 
-from scraping.utils_validator_info import (
-    get_existing_pools_validator_info, clean_validator_name,
-    process_validator_data,
-)
+# from .utils_validator_info import (
+#     get_existing_pools_validator_info, clean_validator_name,
+#     process_validator_data,
+# )
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import UploadFile
 
-from scraping import logger
+from scraping.logger import logger
 from scraping.scrapers_validator_info import (
     MainPageScraper, ValidatorDataScraper, ValidatorLinkAndImageScraper,
     ValidatorExternalLinksScraper
+)
+from scraping.utils_validator_info import (
+    get_existing_pools_validator_info, clean_validator_name,
+    process_validator_data,
 )
 from core.models import Pool, db_helper
 from core import settings, pool_storage
@@ -68,17 +72,17 @@ async def scrape_validator_info():
     settings.scraper_validator_info.ensure_dir(settings.scraper_validator_info.processed_data_dir)
 
     urls = [
-        # "https://validator.info/lava",
-        # "https://validator.info/dydx",
-        # "https://validator.info/cronos-pos",
-        # "https://validator.info/celestia",
-        # "https://validator.info/terra-classic",
-        # "https://validator.info/dymension",
-        # "https://validator.info/saga",
+        "https://validator.info/lava",
+        "https://validator.info/dydx",
+        "https://validator.info/cronos-pos",
+        "https://validator.info/celestia",
+        "https://validator.info/terra-classic",
+        "https://validator.info/dymension",
+        "https://validator.info/saga",
         "https://validator.info/haqq",
-        # "https://validator.info/coreum",
+        "https://validator.info/coreum",
         "https://validator.info/nolus",
-        # "https://validator.info/polygon",
+        "https://validator.info/polygon",
     ]
 
     try:
