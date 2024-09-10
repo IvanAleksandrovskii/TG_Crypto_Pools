@@ -75,7 +75,7 @@ class ChromeConfig:
 
 class ScraperConfigValidatorInfo:
     base_dir: str = os.path.join(os.getcwd(), "collected_data")
-    main_page_dir: str = os.path.join(base_dir, "main_page")
+    # main_page_dir: str = os.path.join(base_dir, "main_page")
     processed_data_dir: str = os.path.join(base_dir, "processed_data")
 
     @staticmethod

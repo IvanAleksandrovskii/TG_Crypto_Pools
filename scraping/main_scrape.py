@@ -1,14 +1,15 @@
-from typing import List, Dict
+from urllib.parse import urlparse
+
 import pandas as pd
 import aiofiles
 import sys
-import csv
-import re
 import os
 import io
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from scraping.utils_validator_info import (
+    get_existing_pools_validator_info, clean_validator_name,
+    process_validator_data,
+)
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -23,29 +24,14 @@ from core.models import Pool, db_helper
 from core import settings, pool_storage
 
 
-async def get_existing_pools_validator_info(session: AsyncSession) -> Dict[str, Pool]:
-    result = await session.execute(select(Pool).where(Pool.parsing_source == "validator.info"))
-    return {pool.name: pool for pool in result.scalars().all()}
-
-
-async def update_pool_statuses(session: AsyncSession, existing_pools: Dict[str, Pool], all_validators: List[str]):
-    for pool in existing_pools.values():
-        if pool.is_active:
-            pool.is_active = pool.name in all_validators
-    await session.commit()
-
-
 def is_valid_url(url):
     if pd.isna(url) or url == '' or url.startswith('mailto:'):
         return False
-    return True
-
-
-def clean_validator_name(name):
-    name = re.sub(r'^(\d+\s+)+', '', name)
-    name = re.sub(r'\bNEW\s*', '', name)
-    name = re.sub(r'\s+', ' ', name).strip()
-    return name
+    try:
+        result = urlparse(url)
+        return all([result.scheme, result.netloc])
+    except:
+        return False
 
 
 async def process_logos(link_image_data, existing_pools):
@@ -75,56 +61,10 @@ async def process_logos(link_image_data, existing_pools):
                 logger.warning(f"Logo path not found or invalid for {validator_name}")
 
 
-def process_validator_data(chain: str, staked_total: float, df_validator: pd.DataFrame, link_image_data: Dict):
-    logger.info(f"Processing validator data for {chain}. Shape: {df_validator.shape}")
-
-    if 'Validator' in df_validator.columns:
-        df_validator = df_validator.rename(columns={'Validator': 'validator_name'})
-
-    df_validator['validator_name'] = df_validator['validator_name'].apply(clean_validator_name)
-
-    # Add link and image data
-    df_validator['external_link'] = df_validator['validator_name'].map(
-        {name: data.get('external_link', '') for name, data in link_image_data.items()}
-    )
-    df_validator['img_src'] = df_validator['validator_name'].map(
-        {name: data.get('img_src', '') for name, data in link_image_data.items()}
-    )
-
-    # Calculate pool_share
-    if 'Total staked' in df_validator.columns:
-        df_validator['pool_share'] = df_validator['Total staked'].apply(
-            lambda x: float(re.sub(r'[^\d.]', '', str(x))) if pd.notna(x) else 0)
-        if staked_total > 0:
-            df_validator['pool_share'] = (df_validator['pool_share'] / staked_total) * 100
-        else:
-            logger.warning(f"staked_total is 0 for chain: {chain}")
-            df_validator['pool_share'] = 0
-    else:
-        logger.warning(f"'Total staked' column not found for chain: {chain}")
-        df_validator['pool_share'] = None
-
-    # Select and rename columns for the final table
-    final_columns = {
-        'validator_name': 'name',
-        'img_src': 'logo',
-        'external_link': 'web_url',
-        'APR': 'apr',
-        'Fee': 'fee',
-        'pool_share': 'pool_share'
-    }
-
-    final_table = df_validator[list(final_columns.keys())].rename(columns=final_columns)
-
-    logger.info(f"Processed validator data for {chain}. Final table shape: {final_table.shape}")
-    return final_table
-
-
 async def scrape_validator_info():
     logger.info("Scraping started.")
 
     settings.scraper_validator_info.ensure_dir(settings.scraper_validator_info.base_dir)
-    settings.scraper_validator_info.ensure_dir(settings.scraper_validator_info.main_page_dir)
     settings.scraper_validator_info.ensure_dir(settings.scraper_validator_info.processed_data_dir)
 
     urls = [
@@ -151,13 +91,8 @@ async def scrape_validator_info():
             logger.error(f"Unexpected data type from extract_data_from_main_page: {type(chains_data)}")
             return
 
-        # Create CSV file with all validator names
-        validator_names_file = os.path.join(settings.scraper_validator_info.processed_data_dir, "all_validators.csv")
-        with open(validator_names_file, 'w', newline='', encoding='utf-8') as f:
-            writer = csv.writer(f)
-            writer.writerow(["Validator Name"])
-
-        main_page_scraper.create_csv_from_main_page(chains_data)
+        # Create a set to store all found validators
+        all_validators = set()
 
         async for session in db_helper.session_getter():
             try:
@@ -184,21 +119,12 @@ async def scrape_validator_info():
 
                     staked_total = float(chain_data.get('totalStakedUsd', 0))
 
-                    # Get new validators
+                    # Clean and get current validators
                     current_validators = set(df_validators['Validator'].apply(clean_validator_name))
+                    all_validators.update(current_validators)
+
+                    # Get new validators
                     new_validators = current_validators - set(existing_pools.keys())
-
-                    # Create a dictionary mapping cleaned names to original names
-                    name_mapping = {clean_validator_name(name): name for name in df_validators['Validator']}
-
-                    # Get original validator names for current validators
-                    original_validator_names = [name_mapping[name] for name in current_validators]
-
-                    # Write validator names to CSV
-                    with open(validator_names_file, 'a', newline='', encoding='utf-8') as f:
-                        writer = csv.writer(f)
-                        for validator_name in original_validator_names:
-                            writer.writerow([validator_name])
 
                     # Scrape links and images for new validators
                     link_image_scraper = ValidatorLinkAndImageScraper([url])
@@ -216,30 +142,14 @@ async def scrape_validator_info():
                     # Process validator data
                     final_table = process_validator_data(chain_name, staked_total, df_validators, link_image_data)
 
-                    # Create a set of validators already added for this chain
-                    # chain_validators = set()
-
-                    # Create a set to track validators processed in this chain
-                    processed_validators = set()
-
-                    # Update existing pools and add new ones
+                    # Add new pools
                     for validator_name in current_validators:
                         cleaned_name = clean_validator_name(validator_name)
-
-                        # Skip if this validator has already been processed in this chain
-                        if cleaned_name in processed_validators:
-                            continue
-
-                        processed_validators.add(cleaned_name)
-
                         external_link = link_image_data.get(cleaned_name, {}).get('external_link', '')
                         is_active = is_valid_url(external_link)
 
                         if cleaned_name in existing_pools:
-                            pool = existing_pools[cleaned_name]
-                            pool.website_url = external_link if is_active else pool.website_url
-                            pool.is_active = is_active
-                            logger.info(f"Updated existing pool: {cleaned_name}, Active: {is_active}")
+                            continue
                         else:
                             new_pool = Pool(
                                 name=cleaned_name,
@@ -263,18 +173,9 @@ async def scrape_validator_info():
                     logger.info(f"Processed data saved for chain: {chain_name}")
                     logger.info(f"Final table saved to: {output_file}")
 
-                # Read validator names from CSV
-                all_validator_names = set()
-                with open(validator_names_file, 'r', newline='', encoding='utf-8') as f:
-                    reader = csv.reader(f)
-                    next(reader)
-                    for row in reader:
-                        if row:
-                            all_validator_names.add(clean_validator_name(row[0]))
-
                 # Deactivate pools not found in any chain
                 for pool_name, pool in existing_pools.items():
-                    if pool_name not in all_validator_names:
+                    if pool_name not in all_validators:
                         if pool.is_active:
                             pool.is_active = False
                             logger.info(f"Pool deactivated: {pool_name}, Not found in validator.info")
@@ -297,19 +198,10 @@ async def scrape_validator_info():
         logger.info("Scraping finished.")
 
         # try:
-        #     # Удаляем все CSV-файлы в директории processed_data, кроме all_validators.csv
         #     csv_files = glob.glob(os.path.join(settings.scraper_validator_info.processed_data_dir, '*.csv'))
         #     for file in csv_files:
-        #         if os.path.basename(file) != 'all_validators.csv':
-        #             os.remove(file)
-        #             logger.info(f"Deleted file: {file}")
-        #
-        #     # Удаляем CSV-файл из директории main_page
-        #     main_page_csv = os.path.join(settings.scraper_validator_info.main_page_dir,
-        #                                  'blockchain_data_validator_info.csv')
-        #     if os.path.exists(main_page_csv):
-        #         os.remove(main_page_csv)
-        #         logger.info(f"Deleted file: {main_page_csv}")
+        #         os.remove(file)
+        #         logger.info(f"Deleted file: {file}")
 
 
 if __name__ == "__main__":

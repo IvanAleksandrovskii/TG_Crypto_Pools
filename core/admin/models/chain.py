@@ -32,9 +32,6 @@ class ChainAdmin(BaseAdminModel, model=Chain):
         },
     }
 
-    async def search_query(self, stmt, term):
-        return stmt.filter(Chain.name.ilike(f"%{term}%"))
-
     async def scaffold_form(self):
         form_class = await super().scaffold_form()
         form_class.coins = SelectMultipleField(

@@ -61,15 +61,6 @@ class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
         'liquidity_token_name': {'label': 'Liquidity Token Name', 'validators': [validators.Optional()]}
     }
 
-    async def search_query(self, stmt, term):
-        return stmt.filter(
-            or_(
-                CoinPoolOffer.coin.has(Coin.name.ilike(f"%{term}%")),
-                CoinPoolOffer.pool.has(Pool.name.ilike(f"%{term}%")),
-                CoinPoolOffer.chain.has(Chain.name.ilike(f"%{term}%")),
-            )
-        )
-
     async def validate_coin_chain_relation(self, session, coin_id, chain_id):
         coin = await session.get(Coin, coin_id)
         if not coin:

@@ -12,21 +12,20 @@ from .base import BaseAdminModel
 # TODO: Update model
 
 class PoolAdmin(BaseAdminModel, model=Pool):
-    column_list = [Pool.name, Pool.is_active, Pool.website_url, Pool.id, Pool.logo]
+    column_list = [Pool.name, Pool.is_active, Pool.website_url, Pool.id, Pool.logo, Pool.parsing_source]
     column_sortable_list = [Pool.name, Pool.is_active]
     column_searchable_list = [Pool.name, Pool.website_url]
     column_filters = [Pool.is_active, Pool.name]
-    column_details_list = ['name', 'website_url', 'is_active', 'id', 'logo', 'coin_pool_offers']
+    column_details_list = ['name', 'website_url', 'is_active', 'id', 'logo', 'parsing_source', 'coin_pool_offers']
 
-    form_columns = ['name', 'website_url', 'is_active', 'logo']
+    form_columns = ['name', 'website_url', 'is_active', 'logo', 'parsing_source']
     form_args = {
         'name': {'validators': [validators.DataRequired()]},
         'website_url': {'validators': [validators.DataRequired(), validators.URL()]},
-        'logo': {'validators': [validators.Optional()]}
+        'logo': {'validators': [validators.Optional()]},
+        'parsing_source': {'validators': [validators.Optional()]},
     }
 
-    async def search_query(self, stmt, term):
-        return stmt.filter(Pool.name.ilike(f"%{term}%"))
 
     async def scaffold_form(self):
         form_class = await super().scaffold_form()

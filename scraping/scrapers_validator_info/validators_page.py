@@ -1,4 +1,3 @@
-import os
 import time
 
 from selenium.webdriver.support import expected_conditions as ec
@@ -10,8 +9,6 @@ import pandas as pd
 
 from scraping import logger
 from scraping.scrapers_validator_info import BaseScraper
-
-from core import settings
 
 
 class ValidatorDataScraper(BaseScraper):

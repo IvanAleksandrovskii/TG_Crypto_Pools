@@ -27,9 +27,6 @@ class CoinAdmin(BaseAdminModel, model=Coin):
         'logo': {'validators': [validators.Optional()]}
     }
 
-    async def search_query(self, stmt, term):
-        return stmt.filter(Coin.name.ilike(f"%{term}%") | Coin.code.ilike(f"%{term}%"))
-
     async def scaffold_form(self):
         form_class = await super().scaffold_form()
         form_class.chains = SelectMultipleField(
