@@ -47,54 +47,32 @@ def clean_validator_name(name):
     return name
 
 
-# def process_validator_data(chain: str, staked_total: float, validator_file: str, link_image_data: Dict):
-#     if not os.path.exists(validator_file):
-#         logger.warning(f"Missing validator data file for chain: {chain}")
-#         return None, None
-#
-#     df_validator = pd.read_csv(validator_file)
-#     logger.info(f"Loaded validator data for {chain}. Shape: {df_validator.shape}")
-#
-#     if 'Validator' in df_validator.columns:
-#         df_validator = df_validator.rename(columns={'Validator': 'validator_name'})
-#
-#     df_validator['validator_name'] = df_validator['validator_name'].apply(clean_validator_name)
-#
-#     # Add link and image data
-#     df_validator['external_link'] = df_validator['validator_name'].map(
-#         {name: data.get('external_link', '') for name, data in link_image_data.items()}
-#     )
-#     df_validator['img_src'] = df_validator['validator_name'].map(
-#         {name: data.get('img_src', '') for name, data in link_image_data.items()}
-#     )
-#
-#     # Filter out validators without external links
-#     # df = df_validator[df_validator['external_link'].apply(is_valid_url)]
-#
-#     validator_table = pd.DataFrame()
-#     validator_table['name'] = df_validator['validator_name']
-#     validator_table['logo'] = df_validator['img_src'].apply(lambda x: x if pd.notna(x) else '')
-#     validator_table['web_url'] = df_validator['external_link']
-#
-#     proposal_table = pd.DataFrame()
-#     proposal_table['validator'] = df_validator['validator_name']
-#     proposal_table['apr'] = df_validator['APR'] if 'APR' in df_validator.columns else None
-#     proposal_table['fee'] = df_validator['Fee'] if 'Fee' in df_validator.columns else None
-#
-#     if 'Total staked' in df_validator.columns:
-#         proposal_table['pool_share'] = df_validator['Total staked'].apply(
-#             lambda x: float(re.sub(r'[^\d.]', '', str(x))) if pd.notna(x) else 0)
-#         if staked_total > 0:
-#             proposal_table['pool_share'] = (proposal_table['pool_share'] / staked_total) * 100
-#         else:
-#             logger.warning(f"staked_total is 0 for chain: {chain}")
-#             proposal_table['pool_share'] = 0
-#     else:
-#         logger.warning(f"'Total staked' column not found for chain: {chain}")
-#         proposal_table['pool_share'] = None
-#
-#     logger.info(f"Processed validator data for {chain}. Validator table shape: {validator_table.shape}, Proposal table shape: {proposal_table.shape}")
-#     return validator_table, proposal_table
+async def process_logos(link_image_data, existing_pools):
+    for validator_name, data in link_image_data.items():
+        pool = existing_pools.get(validator_name)
+        if pool and pool.logo is None:
+            logo_path = data.get('img_src', '')
+            if logo_path and os.path.exists(logo_path):
+                try:
+                    async with aiofiles.open(logo_path, 'rb') as f:
+                        content = await f.read()
+
+                    filename = os.path.basename(logo_path)
+                    upload_file = UploadFile(filename=filename, file=io.BytesIO(content))
+
+                    file_path = await pool_storage.put(upload_file)
+                    logger.info(f"Logo saved for {validator_name} at {file_path}")
+
+                    db_upload_file = UploadFile(filename=filename, file=io.BytesIO(content))
+                    pool.logo = db_upload_file
+
+                    # Remove the original file after successful upload
+                    os.remove(logo_path)
+                except Exception as e:
+                    logger.error(f"Error saving logo for {validator_name}: {str(e)}")
+            else:
+                logger.warning(f"Logo path not found or invalid for {validator_name}")
+
 
 def process_validator_data(chain: str, staked_total: float, df_validator: pd.DataFrame, link_image_data: Dict):
     logger.info(f"Processing validator data for {chain}. Shape: {df_validator.shape}")
@@ -212,7 +190,12 @@ async def scrape_validator_info():
                     external_links_scraper = ValidatorExternalLinksScraper()
                     external_links_data = external_links_scraper.scrape_external_links(link_image_data)
 
-                    # Process validator data using the new function
+                    # Update link_image_data with external links
+                    for validator_name, external_link in external_links_data.items():
+                        if validator_name in link_image_data:
+                            link_image_data[validator_name]['external_link'] = external_link
+
+                    # Process validator data
                     final_table = process_validator_data(chain_name, staked_total, df_validators, link_image_data)
 
                     # Update existing pools and add new ones
@@ -243,27 +226,7 @@ async def scrape_validator_info():
                             logger.info(f"Pool deactivated: {pool_name}")
 
                     # Process logos for new pools
-                    for validator_name, data in link_image_data.items():
-                        pool = existing_pools.get(validator_name)
-                        if pool and pool.logo is None:
-                            logo_path = data.get('img_src', '')
-                            if logo_path and os.path.exists(logo_path):
-                                try:
-                                    async with aiofiles.open(logo_path, 'rb') as f:
-                                        content = await f.read()
-
-                                    filename = f"{validator_name}_{os.path.basename(logo_path)}"
-                                    upload_file = UploadFile(filename=filename, file=io.BytesIO(content))
-
-                                    file_path = await pool_storage.put(upload_file)
-                                    logger.info(f"Logo saved for {validator_name} at {file_path}")
-
-                                    db_upload_file = UploadFile(filename=filename, file=io.BytesIO(content))
-                                    pool.logo = db_upload_file
-                                except Exception as e:
-                                    logger.error(f"Error saving logo for {validator_name}: {str(e)}")
-                            else:
-                                logger.warning(f"Logo path not found or invalid for {validator_name}")
+                    await process_logos(link_image_data, existing_pools)
 
                     # Save processed data
                     output_file = os.path.join(settings.scraper_validator_info.processed_data_dir,

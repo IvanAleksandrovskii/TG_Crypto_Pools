@@ -1,4 +1,6 @@
 import os
+import shutil
+
 import requests
 from urllib.parse import urlparse
 
@@ -10,6 +12,18 @@ from scraping.scrapers_validator_info import BaseScraper
 from scraping import logger
 
 from core import settings
+
+# Define temporary directory for downloaded images
+TEMP_IMAGE_DIR = os.path.join(settings.scraper_validator_info.base_dir, 'temp_images')
+
+
+def ensure_temp_dir():
+    os.makedirs(TEMP_IMAGE_DIR, exist_ok=True)
+
+
+def clean_temp_dir():
+    if os.path.exists(TEMP_IMAGE_DIR):
+        shutil.rmtree(TEMP_IMAGE_DIR)
 
 
 class ValidatorLinkAndImageScraper(BaseScraper):
@@ -61,6 +75,32 @@ class ValidatorLinkAndImageScraper(BaseScraper):
         logger.info("Finished scraping links and images for new validators")
         return result
 
+    # def download_image(self, img_src, validator_name, chain_name):
+    #     try:
+    #         response = requests.get(img_src, stream=True)
+    #         if response.status_code == 200:
+    #             file_extension = os.path.splitext(urlparse(img_src).path)[1]
+    #             if not file_extension:
+    #                 file_extension = '.png'  # Default to .png if no extension is found
+    #
+    #             filename = f"{validator_name}{file_extension}"
+    #             filepath = os.path.join(settings.media.pools_path, filename)
+    #
+    #             os.makedirs(os.path.dirname(filepath), exist_ok=True)
+    #
+    #             with open(filepath, 'wb') as f:
+    #                 for chunk in response.iter_content(1024):
+    #                     f.write(chunk)
+    #
+    #             logger.info(f"Image downloaded for {validator_name} at {filepath}")
+    #             return filepath
+    #         else:
+    #             logger.error(f"Failed to download image for {validator_name}: HTTP {response.status_code}")
+    #             return ""
+    #     except Exception as e:
+    #         logger.error(f"Error downloading image for {validator_name}: {str(e)}")
+    #         return ""
+
     def download_image(self, img_src, validator_name, chain_name):
         try:
             response = requests.get(img_src, stream=True)
@@ -70,7 +110,7 @@ class ValidatorLinkAndImageScraper(BaseScraper):
                     file_extension = '.png'  # Default to .png if no extension is found
 
                 filename = f"{validator_name}{file_extension}"
-                filepath = os.path.join(settings.media.pools_path, filename)
+                filepath = os.path.join(TEMP_IMAGE_DIR, filename)
 
                 os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
