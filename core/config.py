@@ -66,7 +66,7 @@ class MediaConfig(BaseModel):
     coins_path: str = "/app/media/coins"
     pools_path: str = "/app/media/pools"
     chains_path: str = "/app/media/chains"
-    allowed_image_extensions: List[str] = ['.jpg', '.jpeg', '.png', '.gif', '.svg']
+    allowed_image_extensions: List[str] = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.ico']
 
 
 class ChromeConfig:
