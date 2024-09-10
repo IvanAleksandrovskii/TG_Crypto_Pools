@@ -6,8 +6,8 @@ from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 
-from scraping_validator_info.scrapers import BaseScraper
-from scraping_validator_info import logger
+from scraping.scrapers_validator_info import BaseScraper
+from scraping import logger
 
 from core import settings
 

@@ -38,11 +38,11 @@ class BaseScraper:
                 self.driver.quit()
                 self.driver = None
 
-    def clear_browser_data(self):
-        if self.driver:
-            self.driver.delete_all_cookies()
-            self.driver.execute_script("window.localStorage.clear();")
-            self.driver.execute_script("window.sessionStorage.clear();")
+    # def clear_browser_data(self):
+    #     if self.driver:
+    #         self.driver.delete_all_cookies()
+    #         self.driver.execute_script("window.localStorage.clear();")
+    #         self.driver.execute_script("window.sessionStorage.clear();")
 
     @staticmethod
     def _clean_validator_name(name: str) -> str:

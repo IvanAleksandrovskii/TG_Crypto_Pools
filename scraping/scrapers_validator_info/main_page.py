@@ -9,7 +9,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.common.by import By
 
 from .base import BaseScraper
-from scraping_validator_info import logger
+from scraping import logger
 
 from core import settings
 

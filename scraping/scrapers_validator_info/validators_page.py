@@ -8,8 +8,8 @@ from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
 import pandas as pd
 
-from scraping_validator_info import logger
-from scraping_validator_info.scrapers import BaseScraper
+from scraping import logger
+from scraping.scrapers_validator_info import BaseScraper
 
 from core import settings
 
@@ -85,18 +85,18 @@ class ValidatorDataScraper(BaseScraper):
 
         return df
 
-    @staticmethod
-    def save_to_csv(df, url):
-        config = settings.scraper_validator_info
-        chain_name = config.get_chain_name(url)
-        filename = f"{chain_name}_validators.csv"
-        file_path = config.get_file_path(config.validator_data_dir, None, filename)
-
-        config.ensure_dir(os.path.dirname(file_path))
-
-        logger.debug("Columns in DataFrame:")
-        for i, col in enumerate(df.columns):
-            logger.debug(f"{i}: {col}")
-
-        df.to_csv(file_path, index=False)
-        logger.info(f"Data saved to file: {file_path}")
+    # @staticmethod
+    # def save_to_csv(df, url):
+    #     config = settings.scraper_validator_info
+    #     chain_name = config.get_chain_name(url)
+    #     filename = f"{chain_name}_validators.csv"
+    #     file_path = config.get_file_path(config.validator_data_dir, None, filename)
+    #
+    #     config.ensure_dir(os.path.dirname(file_path))
+    #
+    #     logger.debug("Columns in DataFrame:")
+    #     for i, col in enumerate(df.columns):
+    #         logger.debug(f"{i}: {col}")
+    #
+    #     df.to_csv(file_path, index=False)
+    #     logger.info(f"Data saved to file: {file_path}")
