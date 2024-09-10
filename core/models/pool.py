@@ -20,7 +20,7 @@ class Pool(Base):
         cascade="all, delete-orphan",
         lazy="selectin",
     )
-    website_url: Mapped[str] = mapped_column(String, nullable=False)
+    website_url: Mapped[str] = mapped_column(String, nullable=True)
 
     def __repr__(self):
         return f"Pool(name='{self.name}', id={self.id})"

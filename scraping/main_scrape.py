@@ -47,13 +47,57 @@ def clean_validator_name(name):
     return name
 
 
-def process_validator_data(chain: str, staked_total: float, validator_file: str, link_image_data: Dict):
-    if not os.path.exists(validator_file):
-        logger.warning(f"Missing validator data file for chain: {chain}")
-        return None, None
+# def process_validator_data(chain: str, staked_total: float, validator_file: str, link_image_data: Dict):
+#     if not os.path.exists(validator_file):
+#         logger.warning(f"Missing validator data file for chain: {chain}")
+#         return None, None
+#
+#     df_validator = pd.read_csv(validator_file)
+#     logger.info(f"Loaded validator data for {chain}. Shape: {df_validator.shape}")
+#
+#     if 'Validator' in df_validator.columns:
+#         df_validator = df_validator.rename(columns={'Validator': 'validator_name'})
+#
+#     df_validator['validator_name'] = df_validator['validator_name'].apply(clean_validator_name)
+#
+#     # Add link and image data
+#     df_validator['external_link'] = df_validator['validator_name'].map(
+#         {name: data.get('external_link', '') for name, data in link_image_data.items()}
+#     )
+#     df_validator['img_src'] = df_validator['validator_name'].map(
+#         {name: data.get('img_src', '') for name, data in link_image_data.items()}
+#     )
+#
+#     # Filter out validators without external links
+#     # df = df_validator[df_validator['external_link'].apply(is_valid_url)]
+#
+#     validator_table = pd.DataFrame()
+#     validator_table['name'] = df_validator['validator_name']
+#     validator_table['logo'] = df_validator['img_src'].apply(lambda x: x if pd.notna(x) else '')
+#     validator_table['web_url'] = df_validator['external_link']
+#
+#     proposal_table = pd.DataFrame()
+#     proposal_table['validator'] = df_validator['validator_name']
+#     proposal_table['apr'] = df_validator['APR'] if 'APR' in df_validator.columns else None
+#     proposal_table['fee'] = df_validator['Fee'] if 'Fee' in df_validator.columns else None
+#
+#     if 'Total staked' in df_validator.columns:
+#         proposal_table['pool_share'] = df_validator['Total staked'].apply(
+#             lambda x: float(re.sub(r'[^\d.]', '', str(x))) if pd.notna(x) else 0)
+#         if staked_total > 0:
+#             proposal_table['pool_share'] = (proposal_table['pool_share'] / staked_total) * 100
+#         else:
+#             logger.warning(f"staked_total is 0 for chain: {chain}")
+#             proposal_table['pool_share'] = 0
+#     else:
+#         logger.warning(f"'Total staked' column not found for chain: {chain}")
+#         proposal_table['pool_share'] = None
+#
+#     logger.info(f"Processed validator data for {chain}. Validator table shape: {validator_table.shape}, Proposal table shape: {proposal_table.shape}")
+#     return validator_table, proposal_table
 
-    df_validator = pd.read_csv(validator_file)
-    logger.info(f"Loaded validator data for {chain}. Shape: {df_validator.shape}")
+def process_validator_data(chain: str, staked_total: float, df_validator: pd.DataFrame, link_image_data: Dict):
+    logger.info(f"Processing validator data for {chain}. Shape: {df_validator.shape}")
 
     if 'Validator' in df_validator.columns:
         df_validator = df_validator.rename(columns={'Validator': 'validator_name'})
@@ -68,33 +112,33 @@ def process_validator_data(chain: str, staked_total: float, validator_file: str,
         {name: data.get('img_src', '') for name, data in link_image_data.items()}
     )
 
-    # Filter out validators without external links
-    # df = df_validator[df_validator['external_link'].apply(is_valid_url)]
-
-    validator_table = pd.DataFrame()
-    validator_table['name'] = df_validator['validator_name']
-    validator_table['logo'] = df_validator['img_src'].apply(lambda x: x if pd.notna(x) else '')
-    validator_table['web_url'] = df_validator['external_link']
-
-    proposal_table = pd.DataFrame()
-    proposal_table['validator'] = df_validator['validator_name']
-    proposal_table['apr'] = df_validator['APR'] if 'APR' in df_validator.columns else None
-    proposal_table['fee'] = df_validator['Fee'] if 'Fee' in df_validator.columns else None
-
+    # Calculate pool_share
     if 'Total staked' in df_validator.columns:
-        proposal_table['pool_share'] = df_validator['Total staked'].apply(
+        df_validator['pool_share'] = df_validator['Total staked'].apply(
             lambda x: float(re.sub(r'[^\d.]', '', str(x))) if pd.notna(x) else 0)
         if staked_total > 0:
-            proposal_table['pool_share'] = (proposal_table['pool_share'] / staked_total) * 100
+            df_validator['pool_share'] = (df_validator['pool_share'] / staked_total) * 100
         else:
             logger.warning(f"staked_total is 0 for chain: {chain}")
-            proposal_table['pool_share'] = 0
+            df_validator['pool_share'] = 0
     else:
         logger.warning(f"'Total staked' column not found for chain: {chain}")
-        proposal_table['pool_share'] = None
+        df_validator['pool_share'] = None
 
-    logger.info(f"Processed validator data for {chain}. Validator table shape: {validator_table.shape}, Proposal table shape: {proposal_table.shape}")
-    return validator_table, proposal_table
+    # Select and rename columns for the final table
+    final_columns = {
+        'validator_name': 'name',
+        'img_src': 'logo',
+        'external_link': 'web_url',
+        'APR': 'apr',
+        'Fee': 'fee',
+        'pool_share': 'pool_share'
+    }
+
+    final_table = df_validator[list(final_columns.keys())].rename(columns=final_columns)
+
+    logger.info(f"Processed validator data for {chain}. Final table shape: {final_table.shape}")
+    return final_table
 
 
 async def scrape_validator_info():
@@ -156,21 +200,8 @@ async def scrape_validator_info():
 
                     staked_total = float(chain_data.get('totalStakedUsd', 0))
 
-                    # Add required columns to df_validators
-                    df_validators['pool_share'] = df_validators['Total staked'].apply(
-                        lambda x: float(re.sub(r'[^\d.]', '', str(x))) if pd.notna(x) else 0
-                    )
-                    if staked_total > 0:
-                        df_validators['pool_share'] = (df_validators['pool_share'] / staked_total) * 100
-                    else:
-                        logger.warning(f"staked_total is 0 for chain: {chain_name}")
-                        df_validators['pool_share'] = 0
-
-                    # Clean validator names
-                    df_validators['validator_name'] = df_validators['Validator'].apply(clean_validator_name)
-
                     # Get new validators
-                    current_validators = set(df_validators['validator_name'])
+                    current_validators = set(df_validators['Validator'].apply(clean_validator_name))
                     new_validators = current_validators - set(existing_pools.keys())
 
                     # Scrape links and images for new validators
@@ -181,16 +212,20 @@ async def scrape_validator_info():
                     external_links_scraper = ValidatorExternalLinksScraper()
                     external_links_data = external_links_scraper.scrape_external_links(link_image_data)
 
+                    # Process validator data using the new function
+                    final_table = process_validator_data(chain_name, staked_total, df_validators, link_image_data)
+
                     # Update existing pools and add new ones
-                    for validator_name in current_validators:
+                    for _, row in final_table.iterrows():
+                        validator_name = row['name']
                         if validator_name in existing_pools:
                             pool = existing_pools[validator_name]
-                            external_link = external_links_data.get(validator_name, '')
+                            external_link = row['web_url']
                             pool.is_active = is_valid_url(external_link)
                             if pool.is_active:
                                 pool.website_url = external_link
                         else:
-                            external_link = external_links_data.get(validator_name, '')
+                            external_link = row['web_url']
                             new_pool = Pool(
                                 name=validator_name,
                                 website_url=external_link if is_valid_url(external_link) else None,
@@ -231,17 +266,12 @@ async def scrape_validator_info():
                                 logger.warning(f"Logo path not found or invalid for {validator_name}")
 
                     # Save processed data
-                    validator_output = os.path.join(settings.scraper_validator_info.processed_data_dir,
-                                                    f"{chain_name}_validators_processed.csv")
-                    proposal_output = os.path.join(settings.scraper_validator_info.processed_data_dir,
-                                                   f"{chain_name}_proposals_processed.csv")
-
-                    df_validators.to_csv(validator_output, index=False)
-                    df_validators[['validator_name', 'APR', 'Fee', 'pool_share']].to_csv(proposal_output, index=False)
+                    output_file = os.path.join(settings.scraper_validator_info.processed_data_dir,
+                                               f"{chain_name}_validators_processed.csv")
+                    final_table.to_csv(output_file, index=False)
 
                     logger.info(f"Processed data saved for chain: {chain_name}")
-                    logger.info(f"Validator table saved to: {validator_output}")
-                    logger.info(f"Proposal table saved to: {proposal_output}")
+                    logger.info(f"Final table saved to: {output_file}")
 
                 await session.commit()
                 logger.info("All changes committed to the database.")
