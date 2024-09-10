@@ -124,18 +124,17 @@ async def scrape_validator_info():
 
     settings.scraper_validator_info.ensure_dir(settings.scraper_validator_info.base_dir)
     settings.scraper_validator_info.ensure_dir(settings.scraper_validator_info.main_page_dir)
-    # settings.scraper_validator_info.ensure_dir(settings.scraper_validator_info.validator_data_dir)
     settings.scraper_validator_info.ensure_dir(settings.scraper_validator_info.processed_data_dir)
 
     urls = [
-        # "https://validator.info/lava",
-        # "https://validator.info/dydx",
-        # "https://validator.info/cronos-pos",
+        "https://validator.info/lava",
+        "https://validator.info/dydx",
+        "https://validator.info/cronos-pos",
         # "https://validator.info/celestia",
         # "https://validator.info/terra-classic",
         # "https://validator.info/dymension",
         # "https://validator.info/saga",
-        # "https://validator.info/haqq",
+        "https://validator.info/haqq",
         # "https://validator.info/coreum",
         "https://validator.info/nolus",
         # "https://validator.info/polygon",
@@ -198,17 +197,43 @@ async def scrape_validator_info():
                     # Process validator data
                     final_table = process_validator_data(chain_name, staked_total, df_validators, link_image_data)
 
+                    # # Update existing pools and add new ones
+                    # for _, row in final_table.iterrows():
+                    #     validator_name = row['name']
+                    #     if validator_name in existing_pools:
+                    #         pool = existing_pools[validator_name]
+                    #         external_link = row['web_url']
+                    #         pool.is_active = is_valid_url(external_link)
+                    #         if pool.is_active:
+                    #             pool.website_url = external_link
+                    #     else:
+                    #         external_link = row['web_url']
+                    #         new_pool = Pool(
+                    #             name=validator_name,
+                    #             website_url=external_link if is_valid_url(external_link) else None,
+                    #             is_active=is_valid_url(external_link),
+                    #             logo=None
+                    #         )
+                    #         session.add(new_pool)
+                    #         existing_pools[validator_name] = new_pool
+                    #         logger.info(f"New pool added: {validator_name}, Active: {new_pool.is_active}")
+                    #
+                    # # Deactivate pools not in current validators
+                    # for pool_name, pool in existing_pools.items():
+                    #     if pool_name not in current_validators:
+                    #         pool.is_active = False
+                    #         logger.info(f"Pool deactivated: {pool_name}")
+
                     # Update existing pools and add new ones
-                    for _, row in final_table.iterrows():
-                        validator_name = row['name']
+                    for validator_name in current_validators:
                         if validator_name in existing_pools:
                             pool = existing_pools[validator_name]
-                            external_link = row['web_url']
+                            external_link = link_image_data.get(validator_name, {}).get('external_link', '')
                             pool.is_active = is_valid_url(external_link)
                             if pool.is_active:
                                 pool.website_url = external_link
                         else:
-                            external_link = row['web_url']
+                            external_link = link_image_data.get(validator_name, {}).get('external_link', '')
                             new_pool = Pool(
                                 name=validator_name,
                                 website_url=external_link if is_valid_url(external_link) else None,
@@ -216,14 +241,15 @@ async def scrape_validator_info():
                                 logo=None
                             )
                             session.add(new_pool)
-                            existing_pools[validator_name] = new_pool
+                            # existing_pools[validator_name] = new_pool
                             logger.info(f"New pool added: {validator_name}, Active: {new_pool.is_active}")
 
                     # Deactivate pools not in current validators
-                    for pool_name, pool in existing_pools.items():
-                        if pool_name not in current_validators:
-                            pool.is_active = False
-                            logger.info(f"Pool deactivated: {pool_name}")
+                    # for pool_name, pool in existing_pools.items():
+                    #     if pool_name not in current_validators:
+                    #         if pool.is_active:
+                    #             pool.is_active = False
+                    #             logger.info(f"Pool deactivated: {pool_name}")
 
                     # Process logos for new pools
                     await process_logos(link_image_data, existing_pools)
