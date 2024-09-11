@@ -99,73 +99,79 @@ async def scrape_validator_info():
                 existing_pools = await get_existing_pools_validator_info(session)
 
                 for url in urls:
-                    chain_name = settings.scraper_validator_info.get_chain_name(url)
-                    logger.info(f"Processing chain: {chain_name}")
+                    try:
+                        chain_name = settings.scraper_validator_info.get_chain_name(url)
+                        logger.info(f"Processing chain: {chain_name}")
 
-                    # Scrape validator data
-                    validators_page_scraper = ValidatorDataScraper([url])
-                    df_validators = validators_page_scraper.scrape_validator_data(url)
+                        # Scrape validator data
+                        validators_page_scraper = ValidatorDataScraper([url])
+                        df_validators = validators_page_scraper.scrape_validator_data(url)
 
-                    if df_validators is None or df_validators.empty:
-                        logger.warning(f"No validator data found for {chain_name}")
-                        continue
-
-                    # Process validator data
-                    chain_data = next(
-                        (item for item in chains_data if item.get('name', '').lower() == chain_name.lower()), None)
-                    if chain_data is None:
-                        logger.warning(f"No chain data found for {chain_name}")
-                        continue
-
-                    staked_total = float(chain_data.get('totalStakedUsd', 0))
-                    price_data = chain_data.get('priceData', {})
-                    chain_price = float(price_data.get('price', 1))  # Default to 1 if price is not available
-
-                    logger.info(f"Chain\'s ({chain_name}) coin's price: {chain_price}")
-
-                    # Clean and get current validators
-                    current_validators = set(df_validators['Validator'].apply(clean_validator_name))
-                    all_validators.update(current_validators)
-
-                    # Get new validators
-                    new_validators = current_validators - set(existing_pools.keys())
-
-                    # Scrape links and images for new validators
-                    link_image_scraper = ValidatorLinkAndImageScraper([url])
-                    link_image_data = link_image_scraper.scrape_validator_links_and_images(new_validators)
-
-                    # Scrape external links for new validators
-                    external_links_scraper = ValidatorExternalLinksScraper()
-                    external_links_data = external_links_scraper.scrape_external_links(link_image_data)
-
-                    # Update link_image_data with external links
-                    for validator_name, external_link in external_links_data.items():
-                        if validator_name in link_image_data:
-                            link_image_data[validator_name]['external_link'] = external_link
-
-                    # Process validator data
-                    final_table = process_validator_data(chain_name, staked_total, df_validators, link_image_data,
-                                                         chain_price)
-
-                    # Add new pools
-                    for validator_name in current_validators:
-                        cleaned_name = clean_validator_name(validator_name)
-                        external_link = link_image_data.get(cleaned_name, {}).get('external_link', '')
-                        is_active = is_valid_url(external_link)
-
-                        if cleaned_name in existing_pools:
+                        if df_validators is None or df_validators.empty:
+                            logger.warning(f"No validator data found for {chain_name}")
                             continue
-                        else:
-                            new_pool = Pool(
-                                name=cleaned_name,
-                                website_url=external_link if is_active else None,
-                                is_active=is_active,
-                                logo=None,
-                                parsing_source="validator.info",
-                            )
-                            session.add(new_pool)
-                            existing_pools[cleaned_name] = new_pool
-                            logger.info(f"New pool added: {cleaned_name}, Active: {is_active}")
+
+                        # Process validator data
+                        chain_data = next(
+                            (item for item in chains_data if item.get('name', '').lower() == chain_name.lower()), None)
+
+                        if df_validators is None or df_validators.empty:
+                            logger.warning(f"No validator data found for {chain_name}")
+                            continue
+
+                        staked_total = float(chain_data.get('totalStakedUsd', 0))
+                        price_data = chain_data.get('priceData', {})
+                        chain_price = float(price_data.get('price', 1))  # Default to 1 if price is not available
+
+                        logger.info(f"Chain\'s ({chain_name}) coin's price: {chain_price}")
+
+                        # Clean and get current validators
+                        current_validators = set(df_validators['Validator'].apply(clean_validator_name))
+                        all_validators.update(current_validators)
+
+                        # Get new validators
+                        new_validators = current_validators - set(existing_pools.keys())
+
+                        # Scrape links and images for new validators
+                        link_image_scraper = ValidatorLinkAndImageScraper([url])
+                        link_image_data = link_image_scraper.scrape_validator_links_and_images(new_validators)
+
+                        # Scrape external links for new validators
+                        external_links_scraper = ValidatorExternalLinksScraper()
+                        external_links_data = external_links_scraper.scrape_external_links(link_image_data)
+
+                        # Update link_image_data with external links
+                        for validator_name, external_link in external_links_data.items():
+                            if validator_name in link_image_data:
+                                link_image_data[validator_name]['external_link'] = external_link
+
+                        # Process validator data
+                        final_table = process_validator_data(chain_name, staked_total, df_validators, link_image_data,
+                                                             chain_price)
+
+                        # Add new pools
+                        for validator_name in current_validators:
+                            cleaned_name = clean_validator_name(validator_name)
+                            external_link = link_image_data.get(cleaned_name, {}).get('external_link', '')
+                            is_active = is_valid_url(external_link)
+
+                            if cleaned_name in existing_pools:
+                                continue
+                            else:
+                                new_pool = Pool(
+                                    name=cleaned_name,
+                                    website_url=external_link if is_active else None,
+                                    is_active=is_active,
+                                    logo=None,
+                                    parsing_source="validator.info",
+                                )
+                                session.add(new_pool)
+                                existing_pools[cleaned_name] = new_pool
+                                logger.info(f"New pool added: {cleaned_name}, Active: {is_active}")
+
+                    except Exception as e:
+                        logger.error(f"Error processing chain. Error: {e[:100]}")
+                        continue
 
                     # Process logos for new pools
                     await process_logos(link_image_data, existing_pools)
@@ -213,6 +219,7 @@ async def scrape_validator_info():
             except Exception as e:
                 logger.exception(f"Error in database session: {str(e)}")
                 await session.rollback()
+
             finally:
                 await session.close()
 

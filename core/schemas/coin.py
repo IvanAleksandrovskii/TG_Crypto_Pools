@@ -17,7 +17,7 @@ class CoinResponse(BaseResponse):
             logo_path = logo_path[4:]  # Remove "/app" prefix
         return cls(
             id=obj.id,
-            name=obj.name,
+            name=obj.name if obj.name else None,
             code=obj.code,
             logo=logo_path,
         )

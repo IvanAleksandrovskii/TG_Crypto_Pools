@@ -13,7 +13,7 @@ from scraping.scrapers_validator_info import BaseScraper
 
 class ValidatorDataScraper(BaseScraper):
     def scrape_validator_data(self, url):
-        max_retries = 3
+        max_retries = 2
         for attempt in range(max_retries):
             with self.get_driver() as driver:
                 try:
@@ -50,7 +50,7 @@ class ValidatorDataScraper(BaseScraper):
                     logger.warning(f"Attempt {attempt + 1} failed for {url}: {str(e)}")
                     if attempt == max_retries - 1:
                         logger.error(f"Failed to scrape {url} after {max_retries} attempts")
-                        raise
+                        return None
                     time.sleep(5)
 
     def process_data(self, data, url):
