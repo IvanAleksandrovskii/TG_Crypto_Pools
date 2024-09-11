@@ -1,14 +1,14 @@
+from functools import lru_cache
 from typing import Any
 
 from fastapi import HTTPException
-from sqlalchemy import or_
 from sqlalchemy.exc import IntegrityError
 from starlette.requests import Request
 from wtforms import validators
 
 from core import logger
 from core.admin.models.base import BaseAdminModel
-from core.models import CoinPoolOffer, Coin, Pool, Chain
+from core.models import CoinPoolOffer, Coin, Chain
 
 
 # TODO: Update model
@@ -16,7 +16,7 @@ from core.models import CoinPoolOffer, Coin, Pool, Chain
 class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
     column_list = [
         'pool', 'chain', 'coin', CoinPoolOffer.created_at, CoinPoolOffer.is_active,
-        CoinPoolOffer.lock_period, CoinPoolOffer.apr, CoinPoolOffer.amount_from,
+        CoinPoolOffer.lock_period, CoinPoolOffer.apr, CoinPoolOffer.fee, CoinPoolOffer.amount_from,
         CoinPoolOffer.pool_share, CoinPoolOffer.liquidity_token,
         CoinPoolOffer.liquidity_token_name, CoinPoolOffer.id,
     ]
@@ -45,15 +45,16 @@ class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
     ]
 
     form_columns = [
-        'pool', 'chain', 'coin', 'apr',
+        'pool', 'chain', 'coin', 'apr', 'fee',
         'amount_from', 'lock_period', 'pool_share',
         'liquidity_token', 'liquidity_token_name', 'is_active'
     ]
     form_args = {
         'apr': {'validators': [validators.DataRequired(), validators.NumberRange(min=0, max=100)]},
-        'amount_from': {'validators': [validators.DataRequired(), validators.NumberRange(min=0)]},
-        'lock_period': {'validators': [validators.DataRequired(), validators.NumberRange(min=0)]},
-        'pool_share': {'validators': [validators.DataRequired(), validators.NumberRange(min=0, max=100)]},
+        'fee': {'validators': [validators.Optional(), validators.NumberRange(min=0, max=100)]},
+        'amount_from': {'validators': [validators.Optional(), validators.NumberRange(min=0)]},
+        'lock_period': {'validators': [validators.Optional(), validators.NumberRange(min=0)]},
+        'pool_share': {'validators': [validators.Optional(), validators.NumberRange(min=0, max=100)]},
         'coin': {'validators': [validators.DataRequired()]},
         'pool': {'validators': [validators.DataRequired()]},
         'chain': {'validators': [validators.DataRequired()]},
@@ -61,6 +62,7 @@ class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
         'liquidity_token_name': {'label': 'Liquidity Token Name', 'validators': [validators.Optional()]}
     }
 
+    @lru_cache
     async def validate_coin_chain_relation(self, session, coin_id, chain_id):
         coin = await session.get(Coin, coin_id)
         if not coin:

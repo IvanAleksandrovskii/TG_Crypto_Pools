@@ -73,6 +73,64 @@ async def get_latest_offers(session: AsyncSession):
 
     return query
 
+# async def get_latest_offers(session: AsyncSession):
+#     subquery = (
+#         select(
+#             CoinPoolOffer.coin_id,
+#             CoinPoolOffer.pool_id,
+#             CoinPoolOffer.chain_id,
+#             case(
+#                 (CoinPoolOffer.lock_period.is_(None), None),
+#                 (CoinPoolOffer.lock_period == "", None),
+#                 else_=CoinPoolOffer.lock_period
+#             ).label("lock_period"),
+#             func.max(CoinPoolOffer.created_at).label("max_created_at")
+#         )
+#         .group_by(
+#             CoinPoolOffer.coin_id,
+#             CoinPoolOffer.pool_id,
+#             CoinPoolOffer.chain_id,
+#             case(
+#                 (CoinPoolOffer.lock_period.is_(None), None),
+#                 (CoinPoolOffer.lock_period == "", None),
+#                 else_=CoinPoolOffer.lock_period
+#             )
+#         )
+#         .subquery()
+#     )
+#
+#     query = (
+#         CoinPoolOffer.active()
+#         .join(
+#             subquery,
+#             (CoinPoolOffer.coin_id == subquery.c.coin_id) &
+#             (CoinPoolOffer.pool_id == subquery.c.pool_id) &
+#             (CoinPoolOffer.chain_id == subquery.c.chain_id) &
+#             (
+#                 (CoinPoolOffer.lock_period.is_(None) & subquery.c.lock_period.is_(None)) |
+#                 (CoinPoolOffer.lock_period == "" & subquery.c.lock_period.is_(None)) |
+#                 (CoinPoolOffer.lock_period == subquery.c.lock_period)
+#             ) &
+#             (CoinPoolOffer.created_at == subquery.c.max_created_at)
+#         )
+#         .options(
+#             joinedload(CoinPoolOffer.coin),
+#             joinedload(CoinPoolOffer.pool),
+#             joinedload(CoinPoolOffer.chain)
+#         )
+#         .join(Coin, CoinPoolOffer.coin_id == Coin.id)
+#         .join(Pool, CoinPoolOffer.pool_id == Pool.id)
+#         .join(Chain, CoinPoolOffer.chain_id == Chain.id)
+#         .filter(
+#             CoinPoolOffer.is_active == True,
+#             Coin.is_active == True,
+#             Pool.is_active == True,
+#             Chain.is_active == True
+#         )
+#     )
+#
+#     return query
+
 
 @router.get("/", response_model=List[OfferResponse])
 async def get_all_offers(

@@ -25,12 +25,13 @@ class CoinPoolOffer(Base):
     apr: Mapped[float] = mapped_column(Float, nullable=False)
 
     # TODO: add fee
+    fee: Mapped[float] = mapped_column(Float, nullable=True)
 
-    amount_from: Mapped[float] = mapped_column(Float, nullable=False)  # TODO: make nullable
+    amount_from: Mapped[float] = mapped_column(Float, nullable=True)
 
-    lock_period: Mapped[int] = mapped_column(Integer, nullable=False)  # days TODO: make nullable
+    lock_period: Mapped[int] = mapped_column(Integer, nullable=True)  # days
 
-    pool_share: Mapped[float] = mapped_column(Float, nullable=False)  # share in pool TODO: make nullable
+    pool_share: Mapped[float] = mapped_column(Float, nullable=True)  # share in pool
 
     liquidity_token: Mapped[bool] = mapped_column(Boolean, default=False)  # token liquidity
     liquidity_token_name: Mapped[str] = mapped_column(String, nullable=True)  # name of the liquidity token and other info if needed
