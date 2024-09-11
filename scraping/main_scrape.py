@@ -118,6 +118,10 @@ async def scrape_validator_info():
                         continue
 
                     staked_total = float(chain_data.get('totalStakedUsd', 0))
+                    price_data = chain_data.get('priceData', {})
+                    chain_price = float(price_data.get('price', 1))  # Default to 1 if price is not available
+
+                    logger.info(f"Chain\'s ({chain_name}) coin's price: {chain_price}")
 
                     # Clean and get current validators
                     current_validators = set(df_validators['Validator'].apply(clean_validator_name))
@@ -140,7 +144,8 @@ async def scrape_validator_info():
                             link_image_data[validator_name]['external_link'] = external_link
 
                     # Process validator data
-                    final_table = process_validator_data(chain_name, staked_total, df_validators, link_image_data)
+                    final_table = process_validator_data(chain_name, staked_total, df_validators, link_image_data,
+                                                         chain_price)
 
                     # Add new pools
                     for validator_name in current_validators:

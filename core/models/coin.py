@@ -38,4 +38,4 @@ class Coin(Base):
         return f"Coin(name='{self.name}', code='{self.code}', id={self.id})"
 
     def __str__(self):
-        return f"{self.name} ({self.code})"
+        return f"{self.code}"

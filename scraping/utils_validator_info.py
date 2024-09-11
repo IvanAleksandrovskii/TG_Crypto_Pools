@@ -55,7 +55,7 @@ def clean_validator_name(name):
     return name
 
 
-def process_validator_data(chain: str, staked_total: float, df_validator: pd.DataFrame, link_image_data: Dict):
+def process_validator_data(chain: str, staked_total: float, df_validator: pd.DataFrame, link_image_data: Dict, chain_price: float):
     logger.info(f"Processing validator data for {chain}. Shape: {df_validator.shape}")
 
     if 'Validator' in df_validator.columns:
@@ -73,10 +73,10 @@ def process_validator_data(chain: str, staked_total: float, df_validator: pd.Dat
 
     # Calculate pool_share
     if 'Total staked' in df_validator.columns:
-        df_validator['pool_share'] = df_validator['Total staked'].apply(
-            lambda x: float(re.sub(r'[^\d.]', '', str(x))) if pd.notna(x) else 0)
+        df_validator['staked_usd'] = df_validator['Total staked'].apply(
+            lambda x: float(re.sub(r'[^\d.]', '', str(x))) if pd.notna(x) else 0) * chain_price
         if staked_total > 0:
-            df_validator['pool_share'] = (df_validator['pool_share'] / staked_total) * 100
+            df_validator['pool_share'] = (df_validator['staked_usd'] / staked_total) * 100
         else:
             logger.warning(f"staked_total is 0 for chain: {chain}")
             df_validator['pool_share'] = 0
