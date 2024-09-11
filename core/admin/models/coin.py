@@ -22,7 +22,7 @@ class CoinAdmin(BaseAdminModel, model=Coin):
 
     form_columns = ['name', 'code', 'chains', 'is_active', 'logo']
     form_args = {
-        'name': {'validators': [validators.DataRequired()]},
+        'name': {'validators': [validators.Optional()]},
         'code': {'validators': [validators.DataRequired()]},
         'logo': {'validators': [validators.Optional()]}
     }

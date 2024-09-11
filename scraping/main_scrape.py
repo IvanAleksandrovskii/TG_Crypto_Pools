@@ -6,11 +6,6 @@ import sys
 import os
 import io
 
-# from .utils_validator_info import (
-#     get_existing_pools_validator_info, clean_validator_name,
-#     process_validator_data,
-# )
-
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fastapi import UploadFile
@@ -22,7 +17,8 @@ from scraping.scrapers_validator_info import (
 )
 from scraping.utils_validator_info import (
     get_existing_pools_validator_info, clean_validator_name,
-    process_validator_data,
+    process_validator_data, chains_and_coins_are_created_or_create,
+    get_pools_name_id_dict, process_offers_from_csv,
 )
 from core.models import Pool, db_helper
 from core import settings, pool_storage
@@ -188,6 +184,26 @@ async def scrape_validator_info():
                 logger.info("Committing all changes to the database.")
                 await session.commit()
                 logger.info("All changes committed to the database.")
+
+                # Insert offers saved to csv files to the database
+                # coins_dict, chain_dict = await chains_and_coins_are_created_or_create(session)  # CoinDict[code, id], ChainDict[name, id]
+                # pools_dict = await get_pools_name_id_dict(session)  # PoolDict[name, id]
+
+                logger.info("Starting to create or get chains and coins.")
+
+                coins_dict, chain_dict = await chains_and_coins_are_created_or_create(session)
+                logger.info(f"Created/retrieved {len(coins_dict)} coins and {len(chain_dict)} chains.")
+
+                logger.info("Starting to get pools dictionary.")
+                pools_dict = await get_pools_name_id_dict(session)
+                logger.info(f"Retrieved {len(pools_dict)} pools.")
+
+                logger.info("Starting to process offers from CSV files.")
+                await process_offers_from_csv(session, coins_dict, chain_dict, pools_dict)
+
+                logger.info("Finished processing offers from CSV files.")
+
+                logger.info("All scraping and database operations completed successfully.")
 
             except Exception as e:
                 logger.exception(f"Error in database session: {str(e)}")

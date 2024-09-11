@@ -14,7 +14,8 @@ if TYPE_CHECKING:
 
 
 class Coin(Base):
-    name: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    name: Mapped[str] = mapped_column(String, nullable=True)
+
     code: Mapped[str] = mapped_column(String, nullable=False, unique=True)
 
     logo = mapped_column(FileType(storage=coin_storage))
