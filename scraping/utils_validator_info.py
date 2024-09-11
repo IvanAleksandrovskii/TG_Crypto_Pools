@@ -10,7 +10,7 @@ from sqlalchemy import select, insert, true
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core import settings
-from core.models import Pool, Coin, Chain, CoinPoolOffer
+from core.models import Pool, Coin, Chain, CoinPoolOffer, coin_chain
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -146,6 +146,37 @@ async def chains_and_coins_are_created_or_create(session: AsyncSession):
                      coin.code in validator_info_chains_with_coins.values()}
         chain_dict = {chain.name: chain.id for chain in existing_chains if
                       chain.name in validator_info_chains_with_coins.keys()}
+
+        # Create associations between coins and chains
+        updated = False
+
+        for chain in existing_chains:
+            coin_code = validator_info_chains_with_coins.get(chain.name)
+
+            if coin_code:
+                coin = next((c for c in existing_coins if c.code == coin_code), None)
+                if coin:
+                    # Check if association already exists
+                    existing_association = await session.execute(
+                        select(coin_chain).where(
+                            (coin_chain.c.coin_id == coin.id) & (coin_chain.c.chain_id == chain.id)
+                        )
+                    )
+                    if existing_association.first() is None:
+                        # If association doesn't exist, create it
+                        await session.execute(
+                            insert(coin_chain).values(coin_id=coin.id, chain_id=chain.id)
+                        )
+                        logger.info(f"Created association between coin {coin_code} and chain {chain.name}")
+                        updated = True
+
+                else:
+                    logger.warning(f"Coin {coin_code} not found for chain {chain.name}")
+
+        # Commit associations
+        if updated:
+            logger.info("Committing associations to the database.")
+            await session.commit()
 
         return coin_dict, chain_dict
     except Exception as e:
