@@ -14,10 +14,11 @@ class OfferResponse(BaseResponse):
     chain: ChainResponse
     coin: CoinResponse
 
-    apr: float = Field(ge=0, le=100)
-    amount_from: float = Field(ge=0)
-    lock_period: int = Field(ge=0)
-    pool_share: float = Field(ge=0, le=100)
+    apr: Optional[float] = Field(ge=0, le=100)
+    fee: Optional[float] = Field(ge=0, le=100)
+    amount_from: Optional[float] = Field(ge=0)
+    lock_period: Optional[int] = Field(ge=0)
+    pool_share: Optional[float] = Field(ge=0, le=100)
     liquidity_token: bool
     liquidity_token_name: Optional[str]
 
@@ -33,6 +34,7 @@ class OfferResponse(BaseResponse):
             chain=ChainResponse.model_validate(obj.chain),
 
             apr=obj.apr,
+            fee=obj.fee,
             amount_from=obj.amount_from,
             lock_period=obj.lock_period,
             pool_share=obj.pool_share,
@@ -44,8 +46,8 @@ class OfferResponse(BaseResponse):
 
 class OfferHistory(BaseResponse):
     apr: float
-    amount_from: float
-    pool_share: float
+    amount_from: Optional[float]
+    pool_share: Optional[float]
     created_at: datetime
 
     @classmethod

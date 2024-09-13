@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, UTC
-from typing import List, Optional
+from typing import List, Optional, Dict
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -73,64 +73,6 @@ async def get_latest_offers(session: AsyncSession):
 
     return query
 
-# async def get_latest_offers(session: AsyncSession):
-#     subquery = (
-#         select(
-#             CoinPoolOffer.coin_id,
-#             CoinPoolOffer.pool_id,
-#             CoinPoolOffer.chain_id,
-#             case(
-#                 (CoinPoolOffer.lock_period.is_(None), None),
-#                 (CoinPoolOffer.lock_period == "", None),
-#                 else_=CoinPoolOffer.lock_period
-#             ).label("lock_period"),
-#             func.max(CoinPoolOffer.created_at).label("max_created_at")
-#         )
-#         .group_by(
-#             CoinPoolOffer.coin_id,
-#             CoinPoolOffer.pool_id,
-#             CoinPoolOffer.chain_id,
-#             case(
-#                 (CoinPoolOffer.lock_period.is_(None), None),
-#                 (CoinPoolOffer.lock_period == "", None),
-#                 else_=CoinPoolOffer.lock_period
-#             )
-#         )
-#         .subquery()
-#     )
-#
-#     query = (
-#         CoinPoolOffer.active()
-#         .join(
-#             subquery,
-#             (CoinPoolOffer.coin_id == subquery.c.coin_id) &
-#             (CoinPoolOffer.pool_id == subquery.c.pool_id) &
-#             (CoinPoolOffer.chain_id == subquery.c.chain_id) &
-#             (
-#                 (CoinPoolOffer.lock_period.is_(None) & subquery.c.lock_period.is_(None)) |
-#                 (CoinPoolOffer.lock_period == "" & subquery.c.lock_period.is_(None)) |
-#                 (CoinPoolOffer.lock_period == subquery.c.lock_period)
-#             ) &
-#             (CoinPoolOffer.created_at == subquery.c.max_created_at)
-#         )
-#         .options(
-#             joinedload(CoinPoolOffer.coin),
-#             joinedload(CoinPoolOffer.pool),
-#             joinedload(CoinPoolOffer.chain)
-#         )
-#         .join(Coin, CoinPoolOffer.coin_id == Coin.id)
-#         .join(Pool, CoinPoolOffer.pool_id == Pool.id)
-#         .join(Chain, CoinPoolOffer.chain_id == Chain.id)
-#         .filter(
-#             CoinPoolOffer.is_active == True,
-#             Coin.is_active == True,
-#             Pool.is_active == True,
-#             Chain.is_active == True
-#         )
-#     )
-#
-#     return query
-
 
 @router.get("/", response_model=List[OfferResponse])
 async def get_all_offers(
@@ -157,11 +99,16 @@ async def get_all_offers(
 
         result = await session.execute(query)
         offers = result.unique().scalars().all()
+
+        logger.info(f"Number of offers retrieved: {len(offers)}")
+        for offer in offers:
+            logger.info(f"Offer ID: {offer.id}, Coin: {offer.coin.code}, Pool: {offer.pool.name}")
+
+        return [OfferResponse.model_validate(offer) for offer in offers]
+
     except SQLAlchemyError as e:
         logger.exception(f"Unexpected error occurred in get_all_offers: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
-
-    return [OfferResponse.model_validate(offer) for offer in offers]
 
 
 @router.get("/{offer_id}", response_model=OfferResponseWithHistory)
@@ -321,4 +268,24 @@ async def get_max_apr_offer(
         raise HTTPException(status_code=500, detail="Database error occurred")
     except Exception as e:
         logger.exception(f"Unexpected error occurred in get_max_apr_offer: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error")
+
+
+@router.get("/debug/active-records", response_model=Dict[str, int])
+async def get_active_records_count(session: AsyncSession = Depends(db_helper.session_getter)):
+    try:
+        coin_pool_offers_count = await session.execute(
+            select(func.count()).select_from(CoinPoolOffer).where(CoinPoolOffer.is_active == True))
+        coins_count = await session.execute(select(func.count()).select_from(Coin).where(Coin.is_active == True))
+        pools_count = await session.execute(select(func.count()).select_from(Pool).where(Pool.is_active == True))
+        chains_count = await session.execute(select(func.count()).select_from(Chain).where(Chain.is_active == True))
+
+        return {
+            "active_coin_pool_offers": coin_pool_offers_count.scalar(),
+            "active_coins": coins_count.scalar(),
+            "active_pools": pools_count.scalar(),
+            "active_chains": chains_count.scalar(),
+        }
+    except SQLAlchemyError as e:
+        logger.exception(f"Error in get_active_records_count: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")

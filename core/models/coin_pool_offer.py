@@ -24,12 +24,11 @@ class CoinPoolOffer(Base):
 
     apr: Mapped[float] = mapped_column(Float, nullable=False)
 
-    # TODO: add fee
     fee: Mapped[float] = mapped_column(Float, nullable=True)
 
     amount_from: Mapped[float] = mapped_column(Float, nullable=True)
 
-    lock_period: Mapped[int] = mapped_column(Integer, nullable=True)  # days
+    lock_period: Mapped[int] = mapped_column(Integer, nullable=False)  # days
 
     pool_share: Mapped[float] = mapped_column(Float, nullable=True)  # share in pool
 

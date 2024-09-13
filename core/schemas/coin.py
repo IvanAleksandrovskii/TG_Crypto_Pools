@@ -6,7 +6,7 @@ from .base import BaseResponse
 
 
 class CoinResponse(BaseResponse):
-    name: str
+    name: Optional[str]
     code: str
     logo: Optional[str] = Field(None, )
 
@@ -17,7 +17,7 @@ class CoinResponse(BaseResponse):
             logo_path = logo_path[4:]  # Remove "/app" prefix
         return cls(
             id=obj.id,
-            name=obj.name if obj.name else None,
+            name=obj.name,
             code=obj.code,
             logo=logo_path,
         )

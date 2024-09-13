@@ -53,7 +53,7 @@ class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
         'apr': {'validators': [validators.DataRequired(), validators.NumberRange(min=0, max=100)]},
         'fee': {'validators': [validators.Optional(), validators.NumberRange(min=0, max=100)]},
         'amount_from': {'validators': [validators.Optional(), validators.NumberRange(min=0)]},
-        'lock_period': {'validators': [validators.Optional(), validators.NumberRange(min=0)]},
+        'lock_period': {'validators': [validators.DataRequired(), validators.NumberRange(min=0)]},
         'pool_share': {'validators': [validators.Optional(), validators.NumberRange(min=0, max=100)]},
         'coin': {'validators': [validators.DataRequired()]},
         'pool': {'validators': [validators.DataRequired()]},

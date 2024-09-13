@@ -185,6 +185,17 @@ async def chains_and_coins_are_created_or_create(session: AsyncSession):
         raise
 
 
+def normalize_chain_name(name: str) -> str:
+    # Change dash to space
+    name = name.replace('-', ' ')
+    # Delete non-alphanumeric characters
+    name = re.sub(r'[^\w\s]', '', name)
+    # Delete extra spaces
+    name = re.sub(r'\s+', ' ', name).strip()
+    # Convert to lowercase
+    return name.lower()
+
+
 async def process_offers_from_csv(session: AsyncSession, coins_dict: Dict[str, UUID], chain_dict: Dict[str, UUID],
                                   pools_dict: Dict[str, UUID]):
     csv_files = glob.glob(
@@ -195,11 +206,21 @@ async def process_offers_from_csv(session: AsyncSession, coins_dict: Dict[str, U
     all_chains = await session.execute(select(Chain))
     coin_by_chain = {chain.name: coin for chain, coin in zip(all_chains.scalars().all(), all_coins.scalars().all())}
 
+    # Create a mapping for normalized chain names
+    chain_name_mapping = {normalize_chain_name(chain_name): chain_name for chain_name in chain_dict.keys()}
+
     for file in csv_files:
-        chain_name = os.path.basename(file).split('_')[0].capitalize()
+        file_chain_name = os.path.basename(file).split('_')[0]
+        normalized_file_chain_name = normalize_chain_name(file_chain_name)
+
+        chain_name = chain_name_mapping.get(normalized_file_chain_name)
+        if not chain_name:
+            logger.warning(f"Chain name from file '{file_chain_name}' not found in chain_dict. Skipping file {file}")
+            continue
+
         chain_id = chain_dict.get(chain_name)
         if not chain_id:
-            logger.warning(f"Chain {chain_name} not found in chain_dict. Skipping file {file}")
+            logger.warning(f"Chain ID for '{chain_name}' not found in chain_dict. Skipping file {file}")
             continue
 
         coin = coin_by_chain.get(chain_name)
@@ -236,7 +257,8 @@ async def process_offers_from_csv(session: AsyncSession, coins_dict: Dict[str, U
                     chain_id=chain_id,
                     apr=apr,
                     fee=fee,
-                    pool_share=pool_share
+                    pool_share=pool_share,
+                    lock_period=0,
                 )
                 offers_to_add.append(offer)
             except Exception as e:
