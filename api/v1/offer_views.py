@@ -190,7 +190,8 @@ async def get_offer_by_id(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.get("/max-apr/{coin_id}", response_model=OfferResponse)
+@router.get("/max-apr/{coin_id}", response_model=OfferResponse)  # TODO: UPD to return the list for max APR for
+# TODO: same values instead of one object (can be multiple objects with same APR)
 async def get_max_apr_offer(
     coin_id: UUID,
     chain_id: Optional[UUID] = Query(None, description="Filter by chain ID"),
