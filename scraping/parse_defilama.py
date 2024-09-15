@@ -46,6 +46,36 @@ class DefiLamaScraper:
         self.driver = None
         self.filename = 'defillama_lsd_data.csv'
         self.url = 'https://defillama.com/lsd'
+        self.validator_links = {
+            "Lido": "https://lido.fi/",
+            "Binance staked ETH": "https://www.binance.com/en/wbeth",
+            "Rocket Pool": "https://rocketpool.net/",
+            "Mantle Staked ETH": "https://www.mantle.xyz/meth",
+            "Coinbase Wrapped Staked ETH": "https://www.coinbase.com/price/coinbase-wrapped-staked-eth",
+            "Frax Ether": "https://app.frax.finance/frxeth/mint",
+            "StakeStone": "https://stakestone.io/",
+            "Swell Liquid Staking": "https://app.swellnetwork.io/",
+            "Stader": "https://staderlabs.com/",
+            "StakeWise V2": "https://stakewise.io/",
+            "Liquid Collective": "https://liquidcollective.io/",
+            "Crypto.com Staked ETH": "https://crypto.com/staking",
+            "Origin Ether": "https://www.oeth.com/",
+            "Dinero (pxETH)": "https://dinero.xyz",
+            "NodeDAO": "https://www.nodedao.com/",
+            "Ankr": "https://www.ankr.com/",
+            "Treehouse Protocol": "https://www.treehouse.finance/",
+            "GETH": "https://guarda.com/staking/ethereum-staking/",
+            "Stafi": "https://www.stafi.io/",
+            "Hord": "https://app.hord.fi/",
+            "MEV Protocol": "https://mev.io/",
+            "Bifrost Liquid Staking": "https://bifrost.finance/",
+            "Meta Pool ETH": "https://metapool.app/",
+            "CRETH2": "https://classic.cream.finance/eth2/",
+            "NEOPIN Liquid": "https://app.neopin.io/",
+            "Tranchess Ether": "https://tranchess.com/liquid-staking",
+            "Stakehouse": "https://joinstakehouse.com/",
+            "LST Optimizer": "https://dapp.getketh.com/home/"
+        }
 
     @staticmethod
     def get_chrome_driver() -> webdriver.Chrome:
@@ -410,6 +440,75 @@ class DefiLamaScraper:
         # Process the scraped data
         await self.process_scraped_data(scraped_data)
 
+    # async def process_scraped_data(self, scraped_data: List[tuple]):
+    #     async for session in db_helper.session_getter():
+    #         try:
+    #             existing_validators = await self.get_all_validators(session)
+    #             chain = await self.get_or_create_chain(session, "ERC-20")
+    #             coin = await self.get_or_create_coin(session, "ETH")
+    #
+    #             if coin.id not in [c.id for c in chain.coins]:
+    #                 chain.coins.append(coin)
+    #                 await session.flush()
+    #
+    #             validators_to_create = []
+    #             offers_to_create = []
+    #             link_image_data = {}
+    #
+    #             for validator_data in scraped_data:
+    #                 name, validator_link, image_link, _, _, _, _, market_share, lsd, _, _, apr, fee = validator_data
+    #
+    #                 validator = existing_validators.get(name)
+    #
+    #                 if not validator:
+    #                     website_url = await self.extract_validator_website(validator_link)
+    #                     if website_url:
+    #                         validator = Pool(
+    #                             name=name,
+    #                             website_url=website_url,
+    #                             is_active=True,
+    #                             parsing_source="defillama",
+    #                         )
+    #                         validators_to_create.append(validator)
+    #                         logger.info(f"Created new validator: {name}, website: {website_url}")
+    #
+    #                         link_image_data[name] = {'img_src': image_link}
+    #                         logger.info(f"Created new image link: {image_link}")
+    #
+    #                 if validator and apr and apr.strip() != "":
+    #                     # Если validator новый, у него еще нет id
+    #                     if validator not in validators_to_create:
+    #                         validator = existing_validators[name]
+    #
+    #                     offer = self.create_coin_pool_offer_object(validator, chain, coin, market_share, lsd, apr, fee)
+    #                     offers_to_create.append(offer)
+    #
+    #             # Добавляем новые валидаторы в базу данных и получаем их ID
+    #             session.add_all(validators_to_create)
+    #             await session.flush()
+    #
+    #             # Обновляем existing_validators новыми валидаторами
+    #             for validator in validators_to_create:
+    #                 existing_validators[validator.name] = validator
+    #
+    #             # Теперь у всех валидаторов есть ID, можно создавать предложения
+    #             for offer in offers_to_create:
+    #                 validator = existing_validators[offer.pool.name]
+    #                 offer.pool_id = validator.id
+    #                 logger.info(f"Created new offer: {offer}")
+    #
+    #             await self.process_logos(session, link_image_data, existing_validators)
+    #
+    #             session.add_all(offers_to_create)
+    #             await session.commit()
+    #             logger.info(f"Added {len(validators_to_create)} new validators and {len(offers_to_create)} new offers.")
+    #
+    #         except Exception as e:
+    #             logger.exception(f"Error in database session: {str(e)}")
+    #             await session.rollback()
+    #         finally:
+    #             await session.close()
+
     async def process_scraped_data(self, scraped_data: List[tuple]):
         async for session in db_helper.session_getter():
             try:
@@ -431,7 +530,9 @@ class DefiLamaScraper:
                     validator = existing_validators.get(name)
 
                     if not validator:
-                        website_url = await self.extract_validator_website(validator_link)
+                        website_url = self.validator_links.get(name)
+                        if website_url is None:
+                            website_url = await self.extract_validator_website(validator_link)
                         if website_url:
                             validator = Pool(
                                 name=name,
@@ -445,14 +546,6 @@ class DefiLamaScraper:
                             link_image_data[name] = {'img_src': image_link}
                             logger.info(f"Created new image link: {image_link}")
 
-                    if validator and apr and apr.strip() != "":
-                        # Если validator новый, у него еще нет id
-                        if validator not in validators_to_create:
-                            validator = existing_validators[name]
-
-                        offer = self.create_coin_pool_offer_object(validator, chain, coin, market_share, lsd, apr, fee)
-                        offers_to_create.append(offer)
-
                 # Добавляем новые валидаторы в базу данных и получаем их ID
                 session.add_all(validators_to_create)
                 await session.flush()
@@ -461,11 +554,15 @@ class DefiLamaScraper:
                 for validator in validators_to_create:
                     existing_validators[validator.name] = validator
 
-                # Теперь у всех валидаторов есть ID, можно создавать предложения
-                for offer in offers_to_create:
-                    validator = existing_validators[offer.pool.name]
-                    offer.pool_id = validator.id
-                    logger.info(f"Created new offer: {offer}")
+                # Теперь создаем предложения для всех валидаторов
+                for validator_data in scraped_data:
+                    name, _, _, _, _, _, _, market_share, lsd, _, _, apr, fee = validator_data
+                    validator = existing_validators.get(name)
+
+                    if validator and apr and apr.strip() != "":
+                        offer = self.create_coin_pool_offer_object(validator, chain, coin, market_share, lsd, apr, fee)
+                        offers_to_create.append(offer)
+                        logger.info(f"Created new offer: {offer}")
 
                 await self.process_logos(session, link_image_data, existing_validators)
 
@@ -524,37 +621,28 @@ class DefiLamaScraper:
         result = await session.execute(select(Pool).where(Pool.parsing_source == "defillama"))
         return {validator.name: validator for validator in result.scalars().all()}
 
-    # def create_coin_pool_offer_object(self, validator: Pool, chain: Chain, coin: Coin, pool_share: str, lsd: str,
-    #                                   apr: str, fee: str) -> CoinPoolOffer:
-    #     return CoinPoolOffer(
-    #         coin_id=coin.id,
-    #         pool_id=validator.id,
-    #         chain_id=chain.id,
-    #         pool_share=self.clean_percentage(pool_share),
-    #         liquidity_token=(True if lsd else False),
-    #         liquidity_token_name=lsd,
-    #         apr=self.clean_percentage(apr),
-    #         fee=self.clean_percentage(fee),
-    #         lock_period=0,  # Assuming no lock period for DeFi Llama data
-    #     )
-
     async def get_or_create_chain(self, session: AsyncSession, name: str) -> Chain:
+        # Сначала попробуем найти цепь без использования joinedload
         result = await session.execute(
-            select(Chain).options(joinedload(Chain.coins)).where(Chain.name == name)
+            select(Chain).where(Chain.name == name)
         )
         chain = result.scalar_one_or_none()
 
         if not chain:
+            # Если цепь не найдена, создаем новую
             chain = Chain(name=name)
             session.add(chain)
             await session.flush()
-            await session.refresh(chain, ["coins"])
+            await session.refresh(chain)
+
+        # Теперь загрузим связанные монеты отдельно
+        await session.refresh(chain, ["coins"])
 
         return chain
 
     async def get_or_create_coin(self, session: AsyncSession, code: str) -> Coin:
         result = await session.execute(
-            select(Coin).options(joinedload(Coin.chains)).where(Coin.code == code)
+            select(Coin).where(Coin.code == code)
         )
         coin = result.scalar_one_or_none()
 
@@ -585,12 +673,14 @@ class DefiLamaScraper:
 
     def create_coin_pool_offer_object(self, validator: Pool, chain: Chain, coin: Coin, pool_share: str, lsd: str,
                                       apr: str, fee: str) -> CoinPoolOffer:
-        logger.info(
-            f"Creating offer: validator={validator.name} (id={validator.id}), chain={chain.name} (id={chain.id}), coin={coin.code} (id={coin.id})")
+        logger.info(f"Creating offer: validator={validator.name} (id={validator.id}), chain={chain.name} (id={chain.id}), coin={coin.code} (id={coin.id})")
         return CoinPoolOffer(
             coin_id=coin.id,
-            pool=validator,  # Мы будем устанавливать pool_id позже, когда у всех валидаторов будут ID
+            coin=coin,
+            pool_id=validator.id,
+            pool=validator,
             chain_id=chain.id,
+            chain=chain,
             pool_share=self.clean_percentage(pool_share),
             liquidity_token=(True if lsd else False),
             liquidity_token_name=lsd,
@@ -622,34 +712,3 @@ Xvfb :99 & export DISPLAY=:99
 python3 scraping/parse_defilama.py
 ```
 """
-
-validator_links = {
-    "Lido": "https://lido.fi/",
-    "Binance staked ETH": "https://www.binance.com/en/wbeth",
-    "Rocket Pool": "https://rocketpool.net/",
-    "Mantle Staked ETH": "https://www.mantle.xyz/meth",
-    "Coinbase Wrapped Staked ETH": "https://www.coinbase.com/price/coinbase-wrapped-staked-eth",
-    "Frax Ether": "https://app.frax.finance/frxeth/mint",
-    "StakeStone": "https://stakestone.io/",
-    "Swell Liquid Staking": "https://app.swellnetwork.io/",
-    "Stader": "https://staderlabs.com/",
-    "StakeWise V2": "https://stakewise.io/",
-    "Liquid Collective": "https://liquidcollective.io/",
-    "Crypto.com Staked ETH": "https://crypto.com/staking",
-    "Origin Ether": "https://www.oeth.com/",
-    "Dinero (pxETH)": "https://dinero.xyz",
-    "NodeDAO": "https://www.nodedao.com/",
-    "Ankr": "https://www.ankr.com/",
-    "Treehouse Protocol": "https://www.treehouse.finance/",
-    "GETH": "https://guarda.com/staking/ethereum-staking/",
-    "Stafi": "https://www.stafi.io/",
-    "Hord": "https://app.hord.fi/",
-    "MEV Protocol": "https://mev.io/",
-    "Bifrost Liquid Staking": "https://bifrost.finance/",
-    "Meta Pool ETH": "https://metapool.app/",
-    "CRETH2": "https://classic.cream.finance/eth2/",
-    "NEOPIN Liquid": "https://app.neopin.io/",
-    "Tranchess Ether": "https://tranchess.com/liquid-staking",
-    "Stakehouse": "https://joinstakehouse.com/",
-    "LST Optimizer": "https://dapp.getketh.com/home/"
-}
