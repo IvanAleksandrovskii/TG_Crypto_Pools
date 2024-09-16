@@ -32,13 +32,14 @@ class ValidatorExternalLinksScraper(BaseScraper):
                     else:
                         logger.info(f"External link not found for validator: {validator_name}")
 
-                except Exception as e:
+                except:
                     logger.info(f"External link not found for validator: {validator_name}")
 
         logger.info("Finished scraping external links for new validators")
         return result
 
-    def get_external_link(self, driver):
+    @staticmethod
+    def get_external_link(driver):
         try:
             link_element = driver.find_element(By.CLASS_NAME, "el-BlockchainAgentExternalLink")
             return link_element.get_attribute("href")

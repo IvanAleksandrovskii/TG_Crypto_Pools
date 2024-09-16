@@ -9,7 +9,7 @@ def setup_logging() -> logging.Logger:
 
     :return: Configured logger
     """
-    log_level = logging.DEBUG
+    log_level = logging.DEBUG  # TODO: make it configurable or... check with flag and if just created run with info, then warning/error
 
     # Stream handler for console output
     stream_handler = logging.StreamHandler()
@@ -19,7 +19,7 @@ def setup_logging() -> logging.Logger:
     )
     stream_handler.setFormatter(stream_formatter)
 
-    new_logger = logging.getLogger("Scraping")
+    new_logger = logging.getLogger("SCRAPERS")
     new_logger.setLevel(log_level)
     new_logger.addHandler(stream_handler)
 

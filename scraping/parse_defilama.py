@@ -392,28 +392,6 @@ class DefiLamaScraper:
 
         return full_path
 
-    async def parse_data(self):
-        # Main execution
-        url = self.url
-        scraped_data = await self.scrape_validator_data(url)
-
-        # Save to CSV
-        full_path = self.get_file_path()
-
-        # Create directory if it doesn't exist
-        os.makedirs(os.path.dirname(full_path), exist_ok=True)
-
-        headers = ['Name', 'Validator Link', 'Image Link', 'Staked ETH', 'TVL', '7d Change', '30d Change',
-                   'Market Share', 'LSD', 'ETH Peg', 'Mcap/TVL', 'LSD APR', 'Fee']
-
-        with open(full_path, mode='w', newline='', encoding='utf-8') as file:
-            writer = csv.writer(file)
-            writer.writerow(headers)
-            writer.writerows(scraped_data)
-
-        print(f"Extracted {len(scraped_data)} items")
-        print(f"Data saved to {full_path}")
-
     async def process_data(self):
         # Main execution
         url = self.url

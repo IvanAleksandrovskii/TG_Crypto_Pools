@@ -1,7 +1,7 @@
 import os
 from typing import List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from pydantic.networks import PostgresDsn
 
 from dotenv import load_dotenv
@@ -37,7 +37,7 @@ class RunConfig(BaseModel):
 
 
 class DBConfig(BaseModel):
-    url: PostgresDsn = f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@pg:5432/{POSTGRES_DB}"
+    url: PostgresDsn = f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@pg:5432/{POSTGRES_DB}"  # TODO: POSTGRES_ADDRESS from pg
     pool_size: int = POSTGRES_POOL_SIZE
     max_overflow: int = POSTGRES_MAX_OVERFLOW
     echo: bool = POSTGRES_ECHO
@@ -49,6 +49,12 @@ class DBConfig(BaseModel):
         "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
         "pk": "pk_%(table_name)s"
     }
+
+    @field_validator('pool_size', 'max_overflow')
+    def validate_positive_int(cls, v):
+        if v <= 0:
+            raise ValueError("Must be a positive integer")
+        return v
 
 
 class APIConfig(BaseModel):
@@ -66,7 +72,19 @@ class MediaConfig(BaseModel):
     coins_path: str = "/app/media/coins"
     pools_path: str = "/app/media/pools"
     chains_path: str = "/app/media/chains"
-    allowed_image_extensions: List[str] = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.ico', '.webp']
+    allowed_image_extensions: List[str] = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.ico', '.webp']  # TODO: Move to env
+
+    @field_validator('coins_path', 'pools_path', 'chains_path')
+    def validate_path(cls, v):
+        if not os.path.isabs(v):
+            raise ValueError("Path must be absolute")
+        return v
+
+    @field_validator('allowed_image_extensions')
+    def validate_extensions(cls, v):
+        if not all(ext.startswith('.') for ext in v):
+            raise ValueError("All extensions must start with a dot")
+        return v
 
 
 class ChromeConfig:
@@ -95,6 +113,31 @@ class ScraperConfig:
         return os.path.join(base_dir, filename)
 
 
+class SchedulerConfig(BaseModel):  # TODO: move everything to env
+    currency_update_interval: int = 10
+    offers_update_hour: int = 0
+    offers_update_min_range: tuple = (0, 59)
+
+    @field_validator('currency_update_interval')
+    def validate_currency_interval(cls, v):
+        if v <= 0:
+            raise ValueError("currency_update_interval must be positive")
+        return v
+
+    @field_validator('offers_update_hour')
+    def validate_offers_hour(cls, v):
+        if v < 0 or v > 23:
+            raise ValueError("offers_update_hour must be between 0 and 23")
+        return v
+
+    @field_validator('offers_update_min_range')
+    def validate_offers_min_range(cls, v):
+        if len(v) != 2 or not all(isinstance(x, int) and 0 <= x <= 59 for x in v) or v[0] > v[1]:
+            raise ValueError(
+                "offers_update_min_range must be a tuple of two integers between 0 and 59, with the first less than or equal to the second")
+        return v
+
+
 class Settings(BaseSettings):
     run: RunConfig = RunConfig()
     db: DBConfig = DBConfig()
@@ -103,6 +146,7 @@ class Settings(BaseSettings):
     media: MediaConfig = MediaConfig()
     chrome: ChromeConfig = ChromeConfig()
     scraper: ScraperConfig = ScraperConfig()
+    scheduler: SchedulerConfig = SchedulerConfig()
 
 
 settings = Settings()

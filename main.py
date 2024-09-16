@@ -1,4 +1,5 @@
 import logging
+import random
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -36,9 +37,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # not used: ign
     logger.info("Starting up the FastAPI application...")
 
     scheduler = AsyncIOScheduler()
-    scheduler.add_job(run_async(update_coin_prices), 'cron', minute='*/10')
-    scheduler.add_job(run_async(run_parsing), 'cron', hour='0', minute='0')
-
+    scheduler.add_job(
+        run_async(update_coin_prices),
+        'cron',
+        minute='*/' + str(settings.scheduler.currency_update_interval)
+    )
+    scheduler.add_job(
+        run_async(run_parsing),
+        'cron',
+        hour=str(settings.scheduler.offers_update_hour),
+        minute=f'{random.randint(*settings.scheduler.offers_update_min_range)}'
+    )
     scheduler.start()
 
     yield

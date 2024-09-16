@@ -15,12 +15,11 @@ from scraping.utils_validator_info import (
     get_existing_pools_validator_info, clean_validator_name,
     process_validator_data, chains_and_coins_are_created_or_create,
     get_pools_name_id_dict, process_offers_from_csv, process_logos, is_valid_url,
+    get_latest_price_from_db,
 )
 from core.models import Pool, db_helper, Chain, Coin
 from core import settings
 
-
-# TODO: fix if coin price is not found use db coin price
 
 async def parse_validator_info():
     logger.info("Scraping started.")
@@ -169,9 +168,32 @@ async def parse_validator_info():
 
                         staked_total = float(chain_data.get('totalStakedUsd', 0))
                         price_data = chain_data.get('priceData', {})
-                        chain_price = float(price_data.get('_price', 1))  # Default to 1 if _price is not available
 
-                        logger.info(f"Chain\'s ({chain_name}) coin's _price: {chain_price}")
+                        # Chain price here is representing a coin price, it is just associated with that chain in validator.info
+                        chain_price = float(price_data.get('_price', 0))  # Default to 1 if _price is not available
+
+                        # Get the coin code directly from the predefined mapping
+                        coin_code = url_to_coin_code.get(url.split('/')[-1])
+
+                        # Chain price here is representing a coin price associated with the chain in validator.info
+                        chain_price = float(price_data.get('_price', 0))  # Default to 0 if _price is not available
+
+                        if chain_price == 0:
+                            # If price is not available from API, fetch from database
+                            if coin_code:
+                                db_price = await get_latest_price_from_db(session, coin_code)
+                                if db_price is not None:
+                                    chain_price = db_price
+                                    logger.info(f"Using price from database for {coin_code} (chain: {chain_name}): {chain_price}")
+                                else:
+                                    logger.warning(f"No price found in database for {coin_code} (chain: {chain_name}). Using default price of 1.")
+                                    chain_price = 1
+                            else:
+                                logger.warning(
+                                    f"No coin code found for URL {url} (chain: {chain_name}). Using default price of 1.")
+                                chain_price = 1
+
+                        logger.info(f"Chain's ({chain_name}) associated coin ({coin_code}) price: {chain_price}")
 
                         # Clean and get current validators
                         current_validators = set(df_validators['Validator'].apply(clean_validator_name))
@@ -271,7 +293,7 @@ async def parse_validator_info():
     finally:
         logger.info("Scraping finished.")
 
-#
+
 # if __name__ == "__main__":
 #     import asyncio
 #

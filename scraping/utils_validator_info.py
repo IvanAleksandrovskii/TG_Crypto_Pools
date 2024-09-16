@@ -14,7 +14,7 @@ from sqlalchemy import select, insert, true
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core import settings, pool_storage
-from core.models import Pool, Coin, Chain, CoinPoolOffer, coin_chain
+from core.models import Pool, Coin, Chain, CoinPoolOffer, coin_chain, CoinPrice
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
@@ -44,13 +44,6 @@ async def get_pools_name_id_dict(session: AsyncSession) -> Dict[str, UUID]:
     except Exception as e:
         logger.error(f"Error in get_pools_name_id_dict: {str(e)}")
         raise
-
-
-async def update_pool_statuses(session: AsyncSession, existing_pools: Dict[str, Pool], all_validators: List[str]):
-    for pool in existing_pools.values():
-        if pool.is_active:
-            pool.is_active = pool.name in all_validators
-    await session.commit()
 
 
 def clean_validator_name(name):
@@ -316,3 +309,22 @@ def is_valid_url(url):
         return all([result.scheme, result.netloc])
     except:
         return False
+
+
+async def get_latest_price_from_db(session: AsyncSession, coin_code: str) -> float | None:
+    try:
+        result = await session.execute(
+            select(CoinPrice)
+            .join(Coin)
+            .where(Coin.code == coin_code)
+            .order_by(CoinPrice.created_at.desc())
+            .limit(1)
+        )
+        latest_price = result.scalars().first()
+
+        if latest_price:
+            return latest_price.price
+
+    except Exception as e:
+        logger.error(f"Error fetching latest price for {coin_code} from database: {str(e)}")
+        return None

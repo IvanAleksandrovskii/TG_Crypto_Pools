@@ -1,5 +1,4 @@
 import os
-import shutil
 
 import requests
 from urllib.parse import urlparse
@@ -13,17 +12,13 @@ from scraping import logger
 
 from core import settings
 
+
 # Define temporary directory for downloaded images
 TEMP_IMAGE_DIR = os.path.join(settings.scraper.base_dir, 'temp_images')
 
 
 def ensure_temp_dir():
     os.makedirs(TEMP_IMAGE_DIR, exist_ok=True)
-
-
-def clean_temp_dir():
-    if os.path.exists(TEMP_IMAGE_DIR):
-        shutil.rmtree(TEMP_IMAGE_DIR)
 
 
 class ValidatorLinkAndImageScraper(BaseScraper):
@@ -58,7 +53,7 @@ class ValidatorLinkAndImageScraper(BaseScraper):
                                 validator_link = row.find_element(By.TAG_NAME, "a").get_attribute("href")
                                 img_src = row.find_element(By.TAG_NAME, "img").get_attribute("src")
 
-                                image_path = self.download_image(img_src, validator_name, chain_name)
+                                image_path = self.download_image(img_src, validator_name)
 
                                 result[validator_name] = {
                                     "link": validator_link,
@@ -75,7 +70,9 @@ class ValidatorLinkAndImageScraper(BaseScraper):
         logger.info("Finished scraping links and images for new validators")
         return result
 
-    def download_image(self, img_src, validator_name, chain_name):
+    @staticmethod
+    def download_image(img_src, validator_name):
+        ensure_temp_dir()
         try:
             response = requests.get(img_src, stream=True)
             if response.status_code == 200:

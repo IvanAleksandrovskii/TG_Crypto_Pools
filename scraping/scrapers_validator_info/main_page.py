@@ -40,8 +40,7 @@ class MainPageScraper(BaseScraper):
             try:
                 parsed_data = json.loads(json_data)
                 logger.debug(f"Parsed data type: {type(parsed_data)}")
-                logger.debug(
-                    f"Parsed data (first item): {parsed_data[0] if isinstance(parsed_data, list) and parsed_data else 'Empty or not a list'}")
+                logger.debug(f"Parsed data (first item): {parsed_data[0] if isinstance(parsed_data, list) and parsed_data else 'Empty or not a list'}")
 
                 if isinstance(parsed_data, list):
                     data = parsed_data
