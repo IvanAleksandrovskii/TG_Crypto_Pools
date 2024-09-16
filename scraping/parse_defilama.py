@@ -13,6 +13,7 @@ from selenium.webdriver import ActionChains
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import requests
+import asyncio
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -23,19 +24,20 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 
 from webdriver_manager.chrome import ChromeDriverManager
+from pyvirtualdisplay import Display
 
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 
 from scraping import logger
 from core.config import settings
-from core import pool_storage
 from core.models import Pool, Coin, Chain, CoinPoolOffer, db_helper
 
 
 class DefiLamaScraper:
     def __init__(self):
         self.driver = None
+        self.display = None
         self.filename = 'defillama_lsd_data.csv'
         self.url = 'https://defillama.com/lsd'
         self.validator_links = {
@@ -201,6 +203,8 @@ class DefiLamaScraper:
 
     @contextmanager
     def get_driver(self):
+        self.display = Display(size=(1920, 1080), visible=False, backend="xvfb")
+        self.display.start()
         self.driver = self.get_chrome_driver()
         try:
             yield self.driver
@@ -208,9 +212,9 @@ class DefiLamaScraper:
             if self.driver:
                 self.driver.quit()
                 self.driver = None
-
-    def get_driver_no_context_manager(self):
-        return self.get_chrome_driver()
+            if self.display:
+                self.display.stop()
+                self.display = None
 
     @staticmethod
     def _clean_validator_name(name: str) -> str:
@@ -328,6 +332,8 @@ class DefiLamaScraper:
             return []
 
     async def extract_validator_website(self, validator_link):
+        self.display = Display(size=(1920, 1080), visible=False, backend='xvfb')
+        self.display.start()
         driver = self.get_chrome_driver()
         try:
             driver.get(validator_link)
@@ -377,6 +383,7 @@ class DefiLamaScraper:
 
         finally:
             driver.quit()
+            self.display.stop()
 
     def get_file_path(self):
         filename = self.filename
@@ -499,7 +506,8 @@ class DefiLamaScraper:
             finally:
                 await session.close()
 
-    async def process_logos(self, session: AsyncSession, link_image_data, existing_pools):
+    @staticmethod
+    async def process_logos(session: AsyncSession, link_image_data, existing_pools):
         for validator_name, data in link_image_data.items():
             pool = existing_pools.get(validator_name)
             if pool and pool.logo is None:
@@ -529,11 +537,13 @@ class DefiLamaScraper:
 
         await session.flush()
 
-    async def get_all_validators(self, session: AsyncSession) -> Dict[str, Pool]:
+    @staticmethod
+    async def get_all_validators(session: AsyncSession) -> Dict[str, Pool]:
         result = await session.execute(select(Pool).where(Pool.parsing_source == "defillama"))
         return {validator.name: validator for validator in result.scalars().all()}
 
-    async def get_or_create_chain(self, session: AsyncSession, name: str) -> Chain:
+    @staticmethod
+    async def get_or_create_chain(session: AsyncSession, name: str) -> Chain:
         result = await session.execute(
             select(Chain).where(Chain.name == name)
         )
@@ -550,7 +560,8 @@ class DefiLamaScraper:
 
         return chain
 
-    async def get_or_create_coin(self, session: AsyncSession, code: str) -> Coin:
+    @staticmethod
+    async def get_or_create_coin(session: AsyncSession, code: str) -> Coin:
         result = await session.execute(
             select(Coin).where(Coin.code == code)
         )
@@ -563,23 +574,6 @@ class DefiLamaScraper:
             await session.refresh(coin, ["chains"])
 
         return coin
-
-    async def save_logo(self, validator: Pool, image_link: str):
-        try:
-            response = requests.get(image_link, stream=True)
-            if response.status_code == 200:
-                content = response.content
-                filename = f"{validator.name}_logo.png"
-                upload_file = UploadFile(filename=filename, file=io.BytesIO(content))
-
-                file_path = await pool_storage.put(upload_file)
-                logger.info(f"Logo saved for {validator.name} at {file_path}")
-
-                db_upload_file = UploadFile(filename=filename, file=io.BytesIO(content))
-                validator.logo = db_upload_file
-
-        except Exception as e:
-            logger.error(f"Error saving logo for {validator.name}: {str(e)}")
 
     def create_coin_pool_offer_object(self, validator: Pool, chain: Chain, coin: Coin, pool_share: str, lsd: str,
                                       apr: str, fee: str) -> CoinPoolOffer:
@@ -607,18 +601,7 @@ async def parse_defilama():
     # Parse and process data
     await scraper.process_data()
 
-if __name__ == '__main__':
-    import asyncio
-
-    asyncio.run(parse_defilama())
-
-# TODO: run in Docker
-"""
-```bash
-Xvfb :99 & export DISPLAY=:99 
-```
-
-```bash
-python3 scraping/parse_defilama.py
-```
-"""
+# if __name__ == '__main__':
+#     import asyncio
+#
+#     asyncio.run(parse_defilama())

@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 from sqlalchemy import UUID, ForeignKey, Float, Integer, Boolean, String, DateTime, func
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from .base import Base
 
@@ -32,7 +32,7 @@ class CoinPoolOffer(Base):
 
     pool_share: Mapped[float] = mapped_column(Float, nullable=True)  # share in pool
 
-    liquidity_token: Mapped[bool] = mapped_column(Boolean, default=False)  # token liquidity
+    liquidity_token: Mapped[bool] = mapped_column(Boolean, default=False)  # does the liquidity token is in the offer
     liquidity_token_name: Mapped[str] = mapped_column(String, nullable=True)  # name of the liquidity token and other info if needed
 
     created_at: Mapped[datetime] = mapped_column(
@@ -40,6 +40,12 @@ class CoinPoolOffer(Base):
         server_default=func.now(),
         nullable=False
     )
+
+    @validates('liquidity_token_name')
+    def validate_liquidity_token_name(self, key, value):
+        if value:
+            setattr(self, 'liquidity_token', Boolean().python_type(True))
+        return value
 
     def __repr__(self):
         return f"CoinPoolOffer(coin='{self.coin.name}', pool='{self.pool.name}', chain='{self.chain.name}', id={self.id})"

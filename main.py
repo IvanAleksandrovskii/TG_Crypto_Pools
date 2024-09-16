@@ -1,6 +1,8 @@
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
+
+import asyncio
 from icecream import ic
 
 from fastapi.responses import ORJSONResponse, JSONResponse
@@ -15,8 +17,17 @@ from core.admin.models import setup_admin
 from core import settings, logger
 from api import api_router
 
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from services import update_coin_prices
+from scraping import run_parsing
+
 ic.disable()
 # ic.enable()
+
+
+def run_async(func):
+    loop = asyncio.get_event_loop()
+    return lambda: loop.create_task(func())
 
 
 @asynccontextmanager
@@ -24,10 +35,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # not used: ign
     # Startup
     logger.info("Starting up the FastAPI application...")
 
+    scheduler = AsyncIOScheduler()
+    scheduler.add_job(run_async(update_coin_prices), 'cron', minute='*/10')
+    scheduler.add_job(run_async(run_parsing), 'cron', hour='0', minute='0')
+
+    scheduler.start()
+
     yield
 
     # Shutdown
     logger.info("Shutting down the FastAPI application...")
+    scheduler.shutdown()
     await db_helper.dispose()
     await async_sqladmin_db_helper.dispose()
 

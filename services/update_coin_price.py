@@ -1,4 +1,3 @@
-import asyncio
 import aiohttp
 import sys
 import os
@@ -13,6 +12,47 @@ from core import logger
 from core.models import db_helper
 from core.models.coin import Coin
 from core.models.coin_price import CoinPrice
+
+
+coins_should_exist = {
+    "LAVA": "lava-network",
+    "CRO": "crypto-com-chain",
+    "TIA": "celestia",
+    "LUNC": "terra-luna",
+    "SAGA": "saga-2",
+    "COREUM": "coreum",
+    "POL": "matic-network",
+    "DYDX": "dydx",
+    "DYM": "dymension",
+    "ISLM": "islamic-coin",
+    "NLS": "nolus",
+    "ETH": "ethereum",
+}
+
+
+async def check_coins_exist_or_create(session, coins_from_db):
+    coins_from_db_codes = [coin.code for coin in coins_from_db]
+    coins_to_create = []
+    for coin, coin_price_getting_id in coins_should_exist.items():
+        if coin not in coins_from_db_codes:
+            new_coin = Coin(code=coin, coin_id_for_price_getter=coin_price_getting_id, is_active=True)
+            coins_to_create.append(new_coin)
+    if coins_to_create:
+        session.add_all(coins_to_create)
+        await session.commit()
+        query = select(Coin).where(Coin.is_active == True)
+        result = await session.execute(query)
+        coins = result.scalars().all()
+        return coins
+    return [coin for coin in coins_from_db if coin.is_active]
+
+
+async def get_all_coins(session):
+    query = select(Coin)
+    result = await session.execute(query)
+    coins_from_db = result.scalars().all()
+    coins = await check_coins_exist_or_create(session, coins_from_db)
+    return coins
 
 
 def format_price(_price):
@@ -43,29 +83,20 @@ async def get_crypto_prices(crypto_ids):
             return await response.json()
 
 
-async def get_all_coins(session):
-    query = select(Coin).where(Coin.is_active == True)
-    result = await session.execute(query)
-    coins = result.scalars().all()
-    return coins
-
-
 async def update_coin_prices():
     async for session in db_helper.session_getter():
         try:
             all_active_coins = await get_all_coins(session)
 
-            coins_data = [(coin.id, coin.coin_id_for_price_getter) for coin in all_active_coins
+            crypto_ids = [coin.coin_id_for_price_getter for coin in all_active_coins
                           if coin.coin_id_for_price_getter is not None]
-
-            crypto_ids = [coin[1] for coin in coins_data]
 
             prices = await get_crypto_prices(crypto_ids)
 
             updated_coins = 0
-            for _coin_id, coingecko_id in coins_data:
-                if coingecko_id in prices and 'usd' in prices[coingecko_id]:
-                    _price = prices[coingecko_id]['usd']
+            for coin in all_active_coins:
+                if coin.coin_id_for_price_getter in prices and 'usd' in prices[coin.coin_id_for_price_getter]:
+                    _price = prices[coin.coin_id_for_price_getter]['usd']
 
                     # Format price for storage and display
                     formatted_price = format_price(_price)
@@ -74,13 +105,13 @@ async def update_coin_prices():
                     stored_price = float(formatted_price)
 
                     # Create new CoinPrice instance with formatted price
-                    new_price = CoinPrice(coin_id=_coin_id, price=stored_price)
+                    new_price = CoinPrice(coin_id=coin.id, price=stored_price)
                     session.add(new_price)
 
                     updated_coins += 1
-                    logger.info(f"Updated price for coin ID {_coin_id}: {formatted_price}")
+                    logger.info(f"Updated price for coin {coin.code}: {formatted_price}")
                 else:
-                    logger.warning(f"Could not fetch price for coin ID {_coin_id}")
+                    logger.warning(f"Could not fetch price for coin {coin.code}")
 
             await session.commit()
             logger.info(f"Successfully updated prices for {updated_coins} coins")
@@ -98,5 +129,6 @@ async def update_coin_prices():
             await session.close()
 
 
-if __name__ == "__main__":
-    asyncio.run(update_coin_prices())
+# if __name__ == "__main__":
+#     import asyncio
+#     asyncio.run(update_coin_prices())

@@ -47,18 +47,17 @@ class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
     form_columns = [
         'pool', 'chain', 'coin', 'apr', 'fee',
         'amount_from', 'lock_period', 'pool_share',
-        'liquidity_token', 'liquidity_token_name', 'is_active'
+        'liquidity_token_name', 'is_active'
     ]
     form_args = {
         'apr': {'validators': [validators.DataRequired(), validators.NumberRange(min=0, max=100)]},
         'fee': {'validators': [validators.Optional(), validators.NumberRange(min=0, max=100)]},
         'amount_from': {'validators': [validators.Optional(), validators.NumberRange(min=0)]},
-        'lock_period': {'validators': [validators.DataRequired(), validators.NumberRange(min=0)]},
+        'lock_period': {'validators': [validators.DataRequired(), validators.NumberRange(min=0)]},  # TODO: Make can create with 0
         'pool_share': {'validators': [validators.Optional(), validators.NumberRange(min=0, max=100)]},
         'coin': {'validators': [validators.DataRequired()]},
         'pool': {'validators': [validators.DataRequired()]},
         'chain': {'validators': [validators.DataRequired()]},
-        'liquidity_token': {'label': 'Is Liquidity Token'},
         'liquidity_token_name': {'label': 'Liquidity Token Name', 'validators': [validators.Optional()]}
     }
 

@@ -20,6 +20,8 @@ from core.models import Pool, db_helper, Chain, Coin
 from core import settings
 
 
+# TODO: fix if coin price is not found use db coin price
+
 async def parse_validator_info():
     logger.info("Scraping started.")
 
@@ -269,8 +271,8 @@ async def parse_validator_info():
     finally:
         logger.info("Scraping finished.")
 
-
-if __name__ == "__main__":
-    import asyncio
-
-    asyncio.run(parse_validator_info())
+#
+# if __name__ == "__main__":
+#     import asyncio
+#
+#     asyncio.run(parse_validator_info())
