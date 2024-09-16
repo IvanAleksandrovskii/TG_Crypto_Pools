@@ -13,7 +13,7 @@ from .base import BaseAdminModel
 
 class PoolAdmin(BaseAdminModel, model=Pool):
     column_list = [Pool.name, Pool.is_active, Pool.website_url, Pool.id, Pool.logo, Pool.parsing_source]
-    column_sortable_list = [Pool.name, Pool.is_active]
+    column_sortable_list = [Pool.name, Pool.is_active, Pool.website_url, Pool.parsing_source]
     column_searchable_list = [Pool.name, Pool.website_url]
     column_filters = [Pool.is_active, Pool.name]
     column_details_list = ['name', 'website_url', 'is_active', 'id', 'logo', 'parsing_source', 'coin_pool_offers']
@@ -25,7 +25,6 @@ class PoolAdmin(BaseAdminModel, model=Pool):
         'logo': {'validators': [validators.Optional()]},
         'parsing_source': {'validators': [validators.Optional()]},
     }
-
 
     async def scaffold_form(self):
         form_class = await super().scaffold_form()

@@ -11,6 +11,7 @@ from core import coin_storage
 if TYPE_CHECKING:
     from .chain import Chain
     from .coin_pool_offer import CoinPoolOffer
+    from .coin_price import CoinPrice
 
 
 class Coin(Base):
@@ -19,6 +20,8 @@ class Coin(Base):
     code: Mapped[str] = mapped_column(String, nullable=False, unique=True)
 
     logo = mapped_column(FileType(storage=coin_storage))
+
+    coin_id_for_price_getter: Mapped[String] = mapped_column(String, nullable=True)
 
     chains: Mapped[List["Chain"]] = relationship(
         "Chain",
@@ -30,8 +33,14 @@ class Coin(Base):
     pools: Mapped[List["CoinPoolOffer"]] = relationship(
         "CoinPoolOffer",
         back_populates="coin",
-        lazy="selectin",
+        lazy="noload",
         cascade="save-update, merge, delete, delete-orphan",
+    )
+    prices: Mapped[List["CoinPrice"]] = relationship(
+        "CoinPrice",
+        back_populates="coin",
+        lazy="noload",
+        cascade="all, delete-orphan",
     )
 
     def __repr__(self):

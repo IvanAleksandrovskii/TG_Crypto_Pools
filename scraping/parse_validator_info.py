@@ -1,14 +1,10 @@
-from urllib.parse import urlparse
-
-import pandas as pd
-import aiofiles
 import sys
 import os
-import io
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from sqlalchemy import select
 
-from fastapi import UploadFile
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, project_root)
 
 from scraping.logger import logger
 from scraping.scrapers_validator_info import (
@@ -18,54 +14,17 @@ from scraping.scrapers_validator_info import (
 from scraping.utils_validator_info import (
     get_existing_pools_validator_info, clean_validator_name,
     process_validator_data, chains_and_coins_are_created_or_create,
-    get_pools_name_id_dict, process_offers_from_csv,
+    get_pools_name_id_dict, process_offers_from_csv, process_logos, is_valid_url,
 )
-from core.models import Pool, db_helper
-from core import settings, pool_storage
+from core.models import Pool, db_helper, Chain, Coin
+from core import settings
 
 
-def is_valid_url(url):
-    if pd.isna(url) or url == '' or url.startswith('mailto:'):
-        return False
-    try:
-        result = urlparse(url)
-        return all([result.scheme, result.netloc])
-    except:
-        return False
-
-
-async def process_logos(link_image_data, existing_pools):
-    for validator_name, data in link_image_data.items():
-        pool = existing_pools.get(validator_name)
-        if pool and pool.logo is None:
-            logo_path = data.get('img_src', '')
-            if logo_path and os.path.exists(logo_path):
-                try:
-                    async with aiofiles.open(logo_path, 'rb') as f:
-                        content = await f.read()
-
-                    filename = os.path.basename(logo_path)
-                    upload_file = UploadFile(filename=filename, file=io.BytesIO(content))
-
-                    file_path = await pool_storage.put(upload_file)
-                    logger.info(f"Logo saved for {validator_name} at {file_path}")
-
-                    db_upload_file = UploadFile(filename=filename, file=io.BytesIO(content))
-                    pool.logo = db_upload_file
-
-                    # Remove the original file after successful upload
-                    os.remove(logo_path)
-                except Exception as e:
-                    logger.error(f"Error saving logo for {validator_name}: {str(e)}")
-            else:
-                logger.warning(f"Logo path not found or invalid for {validator_name}")
-
-
-async def scrape_validator_info():
+async def parse_validator_info():
     logger.info("Scraping started.")
 
-    settings.scraper_validator_info.ensure_dir(settings.scraper_validator_info.base_dir)
-    settings.scraper_validator_info.ensure_dir(settings.scraper_validator_info.processed_data_dir)
+    settings.scraper.ensure_dir(settings.scraper.base_dir)
+    settings.scraper.ensure_dir(settings.scraper.processed_data_dir)
 
     urls = [
         "https://validator.info/lava",
@@ -80,6 +39,36 @@ async def scrape_validator_info():
         "https://validator.info/nolus",
         "https://validator.info/polygon",
     ]
+
+    # Dictionary to map URL suffixes to chain names
+    url_to_chain_name = {
+        "lava": "Lava",
+        "dydx": "dYdX",
+        "cronos-pos": "Cronos Pos",
+        "celestia": "Celestia",
+        "terra-classic": "Terra Classic",
+        "dymension": "Dymension",
+        "saga": "Saga",
+        "haqq": "HAQQ",
+        "coreum": "Coreum",
+        "nolus": "Nolus",
+        "polygon": "Polygon",
+    }
+
+    # Dictionary to map Coin code to URLs
+    url_to_coin_code = {
+        "lava": "LAVA",
+        "dydx": "DYDX",
+        "cronos-pos": "CRO",
+        "celestia": "TIA",
+        "terra-classic": "LUNC",
+        "dymension": "DYM",
+        "saga": "SAGA",
+        "haqq": "ISLM",
+        "coreum": "COREUM",
+        "nolus": "NLS",
+        "polygon": "POL",
+    }
 
     try:
         # Scrape main page
@@ -96,11 +85,68 @@ async def scrape_validator_info():
 
         async for session in db_helper.session_getter():
             try:
+
                 existing_pools = await get_existing_pools_validator_info(session)
+
+                # Get all chains from the database
+                all_chains = await session.execute(select(Chain))
+                all_chains = all_chains.scalars().all()
+
+                # Create a dictionary of chain name to their active status
+                chain_status = {chain.name: chain.is_active for chain in all_chains}
+
+                # Filter URLs based on chain status
+                filtered_urls = []
+                for url in urls:
+                    chain_name = url_to_chain_name.get(url.split('/')[-1])
+                    if chain_name not in chain_status:
+                        # If the chain doesn't exist in the database, keep the URL
+                        filtered_urls.append(url)
+                        logger.info(f"Keeping URL {url} as its chain {chain_name} doesn't exist in the database.")
+                    elif chain_status[chain_name]:
+                        # If the chain exists and is active, keep the URL
+                        filtered_urls.append(url)
+                        logger.info(f"Keeping URL {url} as its chain {chain_name} is active.")
+                    else:
+                        # If the chain exists but is not active, skip the URL
+                        logger.info(f"Skipping URL {url} as its chain {chain_name} exists but is not active.")
+
+                urls = filtered_urls
+
+                # Get all coins from the database
+                all_coins = await session.execute(select(Coin))
+                all_coins = all_coins.scalars().all()
+
+                coin_status = {coin.code: coin.is_active for coin in all_coins}
+
+                # Filter URLs based on coin status
+                filtered_urls = []
+                for url in urls:
+                    coin_url = url_to_coin_code.get(url.split('/')[-1])
+
+                    if coin_url not in coin_status:
+                        # If the coin doesn't exist in the database, keep the URL
+                        filtered_urls.append(url)
+                        logger.info(f"Keeping URL {url} as its coin {coin_url} doesn't exist in the database.")
+                    elif coin_status[coin_url]:
+                        # If the coin exists and is active, keep the URL
+                        filtered_urls.append(url)
+                        logger.info(f"Keeping URL {url} as its coin {coin_url} is active.")
+                    else:
+                        # If the coin exists but is not active, skip the URL
+                        logger.info(f"Skipping URL {url} as its coin {coin_url} exists but is not active.")
+
+                urls = filtered_urls
+
+                if not urls:
+                    logger.warning("No URLs to process. Scraping process will not continue.")
+                    return
+
+                logger.info(f"Proceeding with scraping for the following URLs: {urls}")
 
                 for url in urls:
                     try:
-                        chain_name = settings.scraper_validator_info.get_chain_name(url)
+                        chain_name = settings.scraper.get_chain_name(url)
                         logger.info(f"Processing chain: {chain_name}")
 
                         # Scrape validator data
@@ -121,9 +167,9 @@ async def scrape_validator_info():
 
                         staked_total = float(chain_data.get('totalStakedUsd', 0))
                         price_data = chain_data.get('priceData', {})
-                        chain_price = float(price_data.get('price', 1))  # Default to 1 if price is not available
+                        chain_price = float(price_data.get('_price', 1))  # Default to 1 if _price is not available
 
-                        logger.info(f"Chain\'s ({chain_name}) coin's price: {chain_price}")
+                        logger.info(f"Chain\'s ({chain_name}) coin's _price: {chain_price}")
 
                         # Clean and get current validators
                         current_validators = set(df_validators['Validator'].apply(clean_validator_name))
@@ -177,7 +223,7 @@ async def scrape_validator_info():
                     await process_logos(link_image_data, existing_pools)
 
                     # Save processed data
-                    output_file = os.path.join(settings.scraper_validator_info.processed_data_dir,
+                    output_file = os.path.join(settings.scraper.processed_data_dir,
                                                f"{chain_name}_validators_processed.csv")
                     final_table.to_csv(output_file, index=False)
 
@@ -189,19 +235,14 @@ async def scrape_validator_info():
                     if pool_name not in all_validators:
                         if pool.is_active:
                             pool.is_active = False
-                            logger.info(f"Pool deactivated: {pool_name}, Not found in validator.info")
+                            logger.warning(f"Pool deactivated: {pool_name}, Not found in validator.info")
 
                 # Commit all changes
                 logger.info("Committing all changes to the database.")
                 await session.commit()
                 logger.info("All changes committed to the database.")
 
-                # Insert offers saved to csv files to the database
-                # coins_dict, chain_dict = await chains_and_coins_are_created_or_create(session)  # CoinDict[code, id], ChainDict[name, id]
-                # pools_dict = await get_pools_name_id_dict(session)  # PoolDict[name, id]
-
                 logger.info("Starting to create or get chains and coins.")
-
                 coins_dict, chain_dict = await chains_and_coins_are_created_or_create(session)
                 logger.info(f"Created/retrieved {len(coins_dict)} coins and {len(chain_dict)} chains.")
 
@@ -211,7 +252,6 @@ async def scrape_validator_info():
 
                 logger.info("Starting to process offers from CSV files.")
                 await process_offers_from_csv(session, coins_dict, chain_dict, pools_dict)
-
                 logger.info("Finished processing offers from CSV files.")
 
                 logger.info("All scraping and database operations completed successfully.")
@@ -229,14 +269,8 @@ async def scrape_validator_info():
     finally:
         logger.info("Scraping finished.")
 
-        # try:
-        #     csv_files = glob.glob(os.path.join(settings.scraper_validator_info.processed_data_dir, '*.csv'))
-        #     for file in csv_files:
-        #         os.remove(file)
-        #         logger.info(f"Deleted file: {file}")
-
 
 if __name__ == "__main__":
     import asyncio
 
-    asyncio.run(scrape_validator_info())
+    asyncio.run(parse_validator_info())

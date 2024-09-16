@@ -1,18 +1,23 @@
 import glob
+import io
 import re
 import os
 import sys
 from typing import Dict, List
+from urllib.parse import urlparse
 from uuid import UUID
 
+import aiofiles
 import pandas as pd
+from fastapi import UploadFile
 from sqlalchemy import select, insert, true
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from core import settings
+from core import settings, pool_storage
 from core.models import Pool, Coin, Chain, CoinPoolOffer, coin_chain
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, project_root)
 
 from scraping.logger import logger
 
@@ -199,7 +204,7 @@ def normalize_chain_name(name: str) -> str:
 async def process_offers_from_csv(session: AsyncSession, coins_dict: Dict[str, UUID], chain_dict: Dict[str, UUID],
                                   pools_dict: Dict[str, UUID]):
     csv_files = glob.glob(
-        os.path.join(settings.scraper_validator_info.processed_data_dir, '*_validators_processed.csv'))
+        os.path.join(settings.scraper.processed_data_dir, '*_validators_processed.csv'))
 
     # Get all coins and chains
     all_coins = await session.execute(select(Coin))
@@ -273,3 +278,41 @@ async def process_offers_from_csv(session: AsyncSession, coins_dict: Dict[str, U
             await session.rollback()
 
     logger.info("All offers from CSV files have been processed and added to the database.")
+
+
+async def process_logos(link_image_data, existing_pools):
+    for validator_name, data in link_image_data.items():
+        pool = existing_pools.get(validator_name)
+        if pool and pool.logo is None:
+            logo_path = data.get('img_src', '')
+            if logo_path and os.path.exists(logo_path):
+                try:
+                    async with aiofiles.open(logo_path, 'rb') as f:
+                        content = await f.read()
+
+                    filename = os.path.basename(logo_path)
+                    upload_file = UploadFile(filename=filename, file=io.BytesIO(content))
+
+                    file_path = await pool_storage.put(upload_file)
+                    logger.info(f"Logo saved for {validator_name} at {file_path}")
+
+                    db_upload_file = UploadFile(filename=filename, file=io.BytesIO(content))
+                    pool.logo = db_upload_file
+
+                    # Remove the original file after successful upload
+                    os.remove(logo_path)
+
+                except Exception as e:
+                    logger.error(f"Error saving logo for {validator_name}: {str(e)}")
+            else:
+                logger.warning(f"Logo path not found or invalid for {validator_name}")
+
+
+def is_valid_url(url):
+    if pd.isna(url) or url == '' or url.startswith('mailto:'):
+        return False
+    try:
+        result = urlparse(url)
+        return all([result.scheme, result.netloc])
+    except:
+        return False

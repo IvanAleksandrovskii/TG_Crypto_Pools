@@ -19,6 +19,13 @@ RUN wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | gpg --d
     && apt-get update \
     && apt-get install -y google-chrome-stable
 
+# Install Chrome dependencies
+RUN apt-get update && apt-get install -y \
+    libglib2.0-0 \
+    libnss3 \
+    libx11-6
+
+RUN apt-get update && apt-get install -y xvfb
 
 # Create a working directory
 WORKDIR /app

@@ -5,17 +5,11 @@ import sys
 import os
 import re
 import io
-# import aiofiles
 from typing import List, Dict
-# from uuid import UUID
 import random
 
-import aiofiles
-import asyncio
-# import pandas as pd
 from fastapi import UploadFile
 from selenium.webdriver import ActionChains
-# from selenium.webdriver import ActionChains
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 import requests
@@ -27,11 +21,9 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
-from sqlalchemy.orm import joinedload
 
 from webdriver_manager.chrome import ChromeDriverManager
 
-# Добавьте путь к корневой директории проекта
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, project_root)
 
@@ -353,7 +345,7 @@ class DefiLamaScraper:
 
                 # Scroll to the "Protocol Information" section
                 driver.execute_script("arguments[0].scrollIntoView();", info_section)
-                await asyncio.sleep(1)  # Даем время для стабилизации после прокрутки
+                await asyncio.sleep(1)
 
                 # Look for "Website" link
                 website_link = WebDriverWait(info_section, 5).until(
@@ -440,75 +432,6 @@ class DefiLamaScraper:
         # Process the scraped data
         await self.process_scraped_data(scraped_data)
 
-    # async def process_scraped_data(self, scraped_data: List[tuple]):
-    #     async for session in db_helper.session_getter():
-    #         try:
-    #             existing_validators = await self.get_all_validators(session)
-    #             chain = await self.get_or_create_chain(session, "ERC-20")
-    #             coin = await self.get_or_create_coin(session, "ETH")
-    #
-    #             if coin.id not in [c.id for c in chain.coins]:
-    #                 chain.coins.append(coin)
-    #                 await session.flush()
-    #
-    #             validators_to_create = []
-    #             offers_to_create = []
-    #             link_image_data = {}
-    #
-    #             for validator_data in scraped_data:
-    #                 name, validator_link, image_link, _, _, _, _, market_share, lsd, _, _, apr, fee = validator_data
-    #
-    #                 validator = existing_validators.get(name)
-    #
-    #                 if not validator:
-    #                     website_url = await self.extract_validator_website(validator_link)
-    #                     if website_url:
-    #                         validator = Pool(
-    #                             name=name,
-    #                             website_url=website_url,
-    #                             is_active=True,
-    #                             parsing_source="defillama",
-    #                         )
-    #                         validators_to_create.append(validator)
-    #                         logger.info(f"Created new validator: {name}, website: {website_url}")
-    #
-    #                         link_image_data[name] = {'img_src': image_link}
-    #                         logger.info(f"Created new image link: {image_link}")
-    #
-    #                 if validator and apr and apr.strip() != "":
-    #                     # Если validator новый, у него еще нет id
-    #                     if validator not in validators_to_create:
-    #                         validator = existing_validators[name]
-    #
-    #                     offer = self.create_coin_pool_offer_object(validator, chain, coin, market_share, lsd, apr, fee)
-    #                     offers_to_create.append(offer)
-    #
-    #             # Добавляем новые валидаторы в базу данных и получаем их ID
-    #             session.add_all(validators_to_create)
-    #             await session.flush()
-    #
-    #             # Обновляем existing_validators новыми валидаторами
-    #             for validator in validators_to_create:
-    #                 existing_validators[validator.name] = validator
-    #
-    #             # Теперь у всех валидаторов есть ID, можно создавать предложения
-    #             for offer in offers_to_create:
-    #                 validator = existing_validators[offer.pool.name]
-    #                 offer.pool_id = validator.id
-    #                 logger.info(f"Created new offer: {offer}")
-    #
-    #             await self.process_logos(session, link_image_data, existing_validators)
-    #
-    #             session.add_all(offers_to_create)
-    #             await session.commit()
-    #             logger.info(f"Added {len(validators_to_create)} new validators and {len(offers_to_create)} new offers.")
-    #
-    #         except Exception as e:
-    #             logger.exception(f"Error in database session: {str(e)}")
-    #             await session.rollback()
-    #         finally:
-    #             await session.close()
-
     async def process_scraped_data(self, scraped_data: List[tuple]):
         async for session in db_helper.session_getter():
             try:
@@ -546,15 +469,15 @@ class DefiLamaScraper:
                             link_image_data[name] = {'img_src': image_link}
                             logger.info(f"Created new image link: {image_link}")
 
-                # Добавляем новые валидаторы в базу данных и получаем их ID
+                # Add new validators to get ID
                 session.add_all(validators_to_create)
                 await session.flush()
 
-                # Обновляем existing_validators новыми валидаторами
+                # Fill existing_validators with new validators
                 for validator in validators_to_create:
                     existing_validators[validator.name] = validator
 
-                # Теперь создаем предложения для всех валидаторов
+                # Create new offers
                 for validator_data in scraped_data:
                     name, _, _, _, _, _, _, market_share, lsd, _, _, apr, fee = validator_data
                     validator = existing_validators.get(name)
@@ -587,22 +510,11 @@ class DefiLamaScraper:
                             None, lambda: requests.get(image_link, stream=True)
                         )
                         if response.status_code == 200:
-
-                            # async with aiofiles.open(logo_path, 'rb') as f:
-                            #     content = await f.read()
-                            #
-                            # filename = os.path.basename(logo_path)
-                            # upload_file = UploadFile(filename=filename, file=io.BytesIO(content))
-                            #
-                            # file_path = await pool_storage.put(upload_file)
-                            # logger.info(f"Logo saved for {validator_name} at {file_path}")
-
                             content = response.content
 
                             filename = f"{validator_name}_logo.png"
                             upload_file = UploadFile(filename=filename, file=io.BytesIO(content))
 
-                            # file_path = await pool_storage.put(upload_file)
                             logger.info(f"Logo saved for {validator_name} at {filename}")
 
                             pool.logo = upload_file
@@ -622,20 +534,18 @@ class DefiLamaScraper:
         return {validator.name: validator for validator in result.scalars().all()}
 
     async def get_or_create_chain(self, session: AsyncSession, name: str) -> Chain:
-        # Сначала попробуем найти цепь без использования joinedload
         result = await session.execute(
             select(Chain).where(Chain.name == name)
         )
         chain = result.scalar_one_or_none()
 
         if not chain:
-            # Если цепь не найдена, создаем новую
+            # If the chain is not found, create a new one
             chain = Chain(name=name)
             session.add(chain)
             await session.flush()
             await session.refresh(chain)
 
-        # Теперь загрузим связанные монеты отдельно
         await session.refresh(chain, ["coins"])
 
         return chain
@@ -686,7 +596,7 @@ class DefiLamaScraper:
             liquidity_token_name=lsd,
             apr=self.clean_percentage(apr),
             fee=self.clean_percentage(fee),
-            lock_period=0,  # Assuming no lock period for DeFi Llama data
+            lock_period=0,
         )
 
 

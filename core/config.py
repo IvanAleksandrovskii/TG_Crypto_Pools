@@ -66,16 +66,15 @@ class MediaConfig(BaseModel):
     coins_path: str = "/app/media/coins"
     pools_path: str = "/app/media/pools"
     chains_path: str = "/app/media/chains"
-    allowed_image_extensions: List[str] = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.ico']
+    allowed_image_extensions: List[str] = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.ico', '.webp']
 
 
 class ChromeConfig:
     path: str = os.path.abspath("/usr/local/bin/chromedriver")
 
 
-class ScraperConfigValidatorInfo:
+class ScraperConfig:
     base_dir: str = os.path.join(os.getcwd(), "collected_data")
-    # main_page_dir: str = os.path.join(base_dir, "main_page")
     processed_data_dir: str = os.path.join(base_dir, "processed_data")
 
     @staticmethod
@@ -103,7 +102,7 @@ class Settings(BaseSettings):
     admin_panel: SQLAdminConfig = SQLAdminConfig()
     media: MediaConfig = MediaConfig()
     chrome: ChromeConfig = ChromeConfig()
-    scraper_validator_info: ScraperConfigValidatorInfo = ScraperConfigValidatorInfo()
+    scraper: ScraperConfig = ScraperConfig()
 
 
 settings = Settings()

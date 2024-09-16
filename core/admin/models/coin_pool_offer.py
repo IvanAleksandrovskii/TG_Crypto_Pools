@@ -29,7 +29,7 @@ class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
         CoinPoolOffer.apr, CoinPoolOffer.created_at,
         CoinPoolOffer.amount_from, CoinPoolOffer.lock_period,
         CoinPoolOffer.pool_share, CoinPoolOffer.liquidity_token,
-        CoinPoolOffer.liquidity_token_name, CoinPoolOffer.is_active
+        CoinPoolOffer.liquidity_token_name, CoinPoolOffer.is_active,
     ]
     column_searchable_list = ['coin.name', 'pool.name', 'chain.name', 'liquidity_token_name']
     column_filters = [

@@ -14,18 +14,29 @@ from .base import BaseAdminModel
 
 
 class CoinAdmin(BaseAdminModel, model=Coin):
-    column_list = [Coin.code, Coin.is_active, Coin.name, Coin.id, Coin.logo]
+    column_list = [Coin.code, Coin.is_active, Coin.name, Coin.id, Coin.logo, Coin.coin_id_for_price_getter]
     column_sortable_list = [Coin.name, Coin.code, Coin.is_active]
     column_searchable_list = [Coin.name, Coin.code]
     column_filters = [Coin.is_active, Coin.name, Coin.code]
-    column_details_list = ['name', 'code', 'is_active', 'id', 'logo', 'chains', 'pools']
+    column_details_list = ['name', 'code', 'is_active', 'id', 'logo', 'chains', 'pools', 'coin_id_for_price_getter']
 
-    form_columns = ['name', 'code', 'chains', 'is_active', 'logo']
+    form_columns = ['name', 'code', 'chains', 'is_active', 'logo', 'coin_id_for_price_getter']
     form_args = {
         'name': {'validators': [validators.Optional()]},
         'code': {'validators': [validators.DataRequired()]},
-        'logo': {'validators': [validators.Optional()]}
+        'logo': {'validators': [validators.Optional()]},
+        'coin_id_for_price_getter': {'validators': [validators.Optional()]},
     }
+
+    async def get_one(self, _id):
+        async with self.session as session:
+            stmt = (
+                select(self.model)
+                .options(selectinload(Coin.chains))
+                .filter_by(id=_id)
+            )
+            result = await session.execute(stmt)
+            return result.scalar_one_or_none()
 
     async def scaffold_form(self):
         form_class = await super().scaffold_form()

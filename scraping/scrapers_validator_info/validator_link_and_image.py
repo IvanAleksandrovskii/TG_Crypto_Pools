@@ -14,7 +14,7 @@ from scraping import logger
 from core import settings
 
 # Define temporary directory for downloaded images
-TEMP_IMAGE_DIR = os.path.join(settings.scraper_validator_info.base_dir, 'temp_images')
+TEMP_IMAGE_DIR = os.path.join(settings.scraper.base_dir, 'temp_images')
 
 
 def ensure_temp_dir():
@@ -29,7 +29,7 @@ def clean_temp_dir():
 class ValidatorLinkAndImageScraper(BaseScraper):
     def __init__(self, urls):
         super().__init__(urls)
-        self.config = settings.scraper_validator_info
+        self.config = settings.scraper
 
     def scrape_validator_links_and_images(self, new_validators):
         logger.info("Starting to scrape validator links and images for new validators...")
