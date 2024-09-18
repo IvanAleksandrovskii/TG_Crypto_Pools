@@ -15,6 +15,7 @@ APP_RUN_PORT = int(os.getenv("APP_RUN_PORT", 8000))
 DEBUG = os.getenv("DEBUG", "True").lower() in ('true', '1')
 
 # Database ENV variables
+POSTGRES_ADDRESS = os.getenv("POSTGRES_ADDRESS", "pg")
 POSTGRES_DB = os.getenv("POSTGRES_DB", "crypto_db_tg_webapp")
 POSTGRES_USER = os.getenv("POSTGRES_USER", "postgres")
 POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD", "password")
@@ -29,6 +30,18 @@ SQLADMIN_SECRET_KEY = os.getenv("SQLADMIN_SECRET_KEY", "sqladmin_secret_key")
 SQLADMIN_USERNAME = os.getenv("SQLADMIN_USERNAME", "admin")
 SQLADMIN_PASSWORD = os.getenv("SQLADMIN_PASSWORD", "password")
 
+# Data UPD ENV variables
+DATA_UPD_INTERVAL_CURRENCY = os.getenv("DATA_UPD_INTERVAL_CURRENCY", 10)
+DATA_UPD_OFFERS_TIME_HOUR_UTC = os.getenv("DATA_UPD_OFFERS_TIME_HOUR_UTC", 0)
+DATA_UPD_OFFERS_TIME_RANDOM_MINUTE_FORM_TUPLE = os.getenv("DATA_UPD_OFFERS_TIME_RANDOM_MINUTE_FORM_TUPLE", (0, 25))
+
+# Scraper ENV variables
+SCRAPER_DEBUG = os.getenv("SCRAPER_DEBUG", False)
+
+MEDIA_FILES_ALLOWED_EXTENSIONS = os.getenv("MEDIA_FILES_ALLOWED_EXTENSIONS", ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.ico', '.webp'])
+
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS")
+
 
 class RunConfig(BaseModel):
     host: str = APP_RUN_HOST
@@ -37,7 +50,7 @@ class RunConfig(BaseModel):
 
 
 class DBConfig(BaseModel):
-    url: PostgresDsn = f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@pg:5432/{POSTGRES_DB}"  # TODO: POSTGRES_ADDRESS from pg
+    url: PostgresDsn = f"postgresql+asyncpg://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_ADDRESS}:5432/{POSTGRES_DB}"
     pool_size: int = POSTGRES_POOL_SIZE
     max_overflow: int = POSTGRES_MAX_OVERFLOW
     echo: bool = POSTGRES_ECHO
@@ -72,7 +85,7 @@ class MediaConfig(BaseModel):
     coins_path: str = "/app/media/coins"
     pools_path: str = "/app/media/pools"
     chains_path: str = "/app/media/chains"
-    allowed_image_extensions: List[str] = ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.ico', '.webp']  # TODO: Move to env
+    allowed_image_extensions: List[str] = MEDIA_FILES_ALLOWED_EXTENSIONS
 
     @field_validator('coins_path', 'pools_path', 'chains_path')
     def validate_path(cls, v):
@@ -87,13 +100,14 @@ class MediaConfig(BaseModel):
         return v
 
 
-class ChromeConfig:
+class ChromeConfig(BaseModel):
     path: str = os.path.abspath("/usr/local/bin/chromedriver")
 
 
-class ScraperConfig:
+class ScraperConfig(BaseModel):
     base_dir: str = os.path.join(os.getcwd(), "collected_data")
     processed_data_dir: str = os.path.join(base_dir, "processed_data")
+    debug: bool = SCRAPER_DEBUG
 
     @staticmethod
     def ensure_dir(directory):
@@ -113,10 +127,10 @@ class ScraperConfig:
         return os.path.join(base_dir, filename)
 
 
-class SchedulerConfig(BaseModel):  # TODO: move everything to env
-    currency_update_interval: int = 10
-    offers_update_hour: int = 0
-    offers_update_min_range: tuple = (0, 59)
+class SchedulerConfig(BaseModel):
+    currency_update_interval: int = DATA_UPD_INTERVAL_CURRENCY  # Interval of currency update
+    offers_update_hour: int = DATA_UPD_OFFERS_TIME_HOUR_UTC  # Exact hour of update offers from defilama and validator.info with UTC
+    offers_update_min_range: tuple = DATA_UPD_OFFERS_TIME_RANDOM_MINUTE_FORM_TUPLE  # Exact minute of update to avoid blocking dew to repeating time of parsing
 
     @field_validator('currency_update_interval')
     def validate_currency_interval(cls, v):
@@ -138,6 +152,10 @@ class SchedulerConfig(BaseModel):  # TODO: move everything to env
         return v
 
 
+class CORSConfig(BaseModel):
+    allowed_origins: List = ALLOWED_ORIGINS
+
+
 class Settings(BaseSettings):
     run: RunConfig = RunConfig()
     db: DBConfig = DBConfig()
@@ -147,6 +165,7 @@ class Settings(BaseSettings):
     chrome: ChromeConfig = ChromeConfig()
     scraper: ScraperConfig = ScraperConfig()
     scheduler: SchedulerConfig = SchedulerConfig()
+    cors: CORSConfig = CORSConfig()
 
 
 settings = Settings()

@@ -28,6 +28,7 @@ services:
       - APP_RUN_HOST=${APP_RUN_HOST:-0.0.0.0}
       - APP_RUN_PORT=${APP_RUN_PORT:-8000}
 
+      - POSTGRES_ADDRESS=${POSTGRES_ADDRESS:-pg}
       - POSTGRES_DB=${POSTGRES_DB:-crypto_db_tg_webapp}
       - POSTGRES_ECHO=${POSTGRES_ECHO:-True}
       - POSTGRES_USER=${POSTGRES_USER:-postgres}
@@ -38,6 +39,16 @@ services:
       - SQLADMIN_SECRET_KEY=${SQLADMIN_SECRET_KEY:-secret_key_12345}
       - SQLADMIN_USERNAME=${SQLADMIN_USERNAME:-admin}
       - SQLADMIN_PASSWORD=${SQLADMIN_PASSWORD:-password}
+
+      - DATA_UPD_INTERVAL_CURRENCY=${DATA_UPD_INTERVAL_CURRENCY:-10}
+      - DATA_UPD_OFFERS_TIME_HOUR_UTC=${DATA_UPD_OFFERS_TIME_HOUR_UTC:-0}
+      - DATA_UPD_OFFERS_TIME_RANDOM_MINUTE_FORM_TUPLE=${DATA_UPD_OFFERS_TIME_RANDOM_MINUTE_FORM_TUPLE:-(0, 25)}
+
+      - SCRAPER_DEBUG=${SCRAPER_DEBUG:-False}  # With false on creation first scraping will run with debug anyway, next with log level warning
+
+      - MEDIA_FILES_ALLOWED_EXTENSIONS=${MEDIA_FILES_ALLOWED_EXTENSIONS:-['.jpg', '.jpeg', '.png', '.gif', '.svg', '.ico', '.webp']}
+
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-["*"]}
 
     command: /app/start.sh
     volumes:

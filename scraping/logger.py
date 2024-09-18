@@ -1,5 +1,9 @@
 import logging
+import os
+
 from pythonjsonlogger import jsonlogger
+
+from core import settings
 
 
 # Setup logging
@@ -9,7 +13,13 @@ def setup_logging() -> logging.Logger:
 
     :return: Configured logger
     """
-    log_level = logging.DEBUG  # TODO: make it configurable or... check with flag and if just created run with info, then warning/error
+    INIT_FLAG = "/app/.init_data_collected"
+
+    # Set log level based on the presence of the init flag file
+    if not settings.scraper.debug and os.path.exists(INIT_FLAG):
+        log_level = logging.WARNING
+    else:
+        log_level = logging.DEBUG
 
     # Stream handler for console output
     stream_handler = logging.StreamHandler()
@@ -19,7 +29,7 @@ def setup_logging() -> logging.Logger:
     )
     stream_handler.setFormatter(stream_formatter)
 
-    new_logger = logging.getLogger("SCRAPERS")
+    new_logger = logging.getLogger("SCRAPING")
     new_logger.setLevel(log_level)
     new_logger.addHandler(stream_handler)
 

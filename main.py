@@ -110,6 +110,15 @@ class NoFaviconFilter(logging.Filter):
 
 logging.getLogger("uvicorn.access").addFilter(NoFaviconFilter())
 
+# CORS
+main_app.add_middleware(
+    CORSMiddleware,  # type: ignore
+    allow_origins=settings.cors.allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 if __name__ == '__main__':
     uvicorn.run("main:main_app",
                 host=ic(settings.run.host),
