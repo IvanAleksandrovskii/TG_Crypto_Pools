@@ -10,8 +10,20 @@ from core import logger
 from core.admin.models.base import BaseAdminModel
 from core.models import CoinPoolOffer, Coin, Chain
 
+from wtforms.validators import ValidationError
 
-# TODO: Update model
+
+def validate_lock_period(form, field):
+    if field.data is None or field.data == '':
+        field.data = 0  # If empty field set 0
+    else:
+        try:
+            value = int(field.data)
+            if value < 0:
+                raise ValidationError('Lock period must be a non-negative integer.')
+        except ValueError:
+            raise ValidationError('Lock period must be a valid integer.')
+
 
 class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
     column_list = [
@@ -30,13 +42,18 @@ class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
         CoinPoolOffer.amount_from, CoinPoolOffer.lock_period,
         CoinPoolOffer.pool_share, CoinPoolOffer.liquidity_token,
         CoinPoolOffer.liquidity_token_name, CoinPoolOffer.is_active,
+        CoinPoolOffer.coin_id, CoinPoolOffer.pool_id, CoinPoolOffer.chain_id,
+        CoinPoolOffer.fee,
     ]
-    column_searchable_list = ['coin.name', 'pool.name', 'chain.name', 'liquidity_token_name']
+    column_searchable_list = ['coin.name', 'pool.name', 'chain.name', 'liquidity_token_name',
+                              CoinPoolOffer.coin_id, CoinPoolOffer.pool_id, CoinPoolOffer.chain_id,
+                              CoinPoolOffer.id]
     column_filters = [
         CoinPoolOffer.apr, CoinPoolOffer.created_at,
         CoinPoolOffer.amount_from, CoinPoolOffer.lock_period,
         CoinPoolOffer.pool_share, CoinPoolOffer.liquidity_token,
-        CoinPoolOffer.liquidity_token_name, CoinPoolOffer.is_active
+        CoinPoolOffer.liquidity_token_name, CoinPoolOffer.is_active,
+        CoinPoolOffer.coin_id, CoinPoolOffer.pool_id, CoinPoolOffer.chain_id,
     ]
 
     column_details_list = [
@@ -53,7 +70,7 @@ class CoinPoolOfferAdmin(BaseAdminModel, model=CoinPoolOffer):
         'apr': {'validators': [validators.DataRequired(), validators.NumberRange(min=0, max=100)]},
         'fee': {'validators': [validators.Optional(), validators.NumberRange(min=0, max=100)]},
         'amount_from': {'validators': [validators.Optional(), validators.NumberRange(min=0)]},
-        'lock_period': {'validators': [validators.DataRequired(), validators.NumberRange(min=0)]},  # TODO: Make can create with 0
+        'lock_period': {'validators': [validate_lock_period]},
         'pool_share': {'validators': [validators.Optional(), validators.NumberRange(min=0, max=100)]},
         'coin': {'validators': [validators.DataRequired()]},
         'pool': {'validators': [validators.DataRequired()]},

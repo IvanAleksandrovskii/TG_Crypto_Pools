@@ -3,7 +3,7 @@ import io
 import re
 import os
 import sys
-from typing import Dict, List
+from typing import Dict
 from urllib.parse import urlparse
 from uuid import UUID
 
@@ -196,6 +196,21 @@ def normalize_chain_name(name: str) -> str:
 
 async def process_offers_from_csv(session: AsyncSession, coins_dict: Dict[str, UUID], chain_dict: Dict[str, UUID],
                                   pools_dict: Dict[str, UUID]):
+    """
+    Process offers data from CSV files and insert them into the database.
+
+    This function reads CSV files containing validator data, processes each row,
+    and creates CoinPoolOffer objects to be inserted into the database.
+
+    Args:
+        session (AsyncSession): The database session.
+        coins_dict (Dict[str, UUID]): Dictionary mapping coin codes to their UUIDs.
+        chain_dict (Dict[str, UUID]): Dictionary mapping chain names to their UUIDs.
+        pools_dict (Dict[str, UUID]): Dictionary mapping pool names to their UUIDs.
+
+    Returns:
+        None
+    """
     csv_files = glob.glob(
         os.path.join(settings.scraper.processed_data_dir, '*_validators_processed.csv'))
 

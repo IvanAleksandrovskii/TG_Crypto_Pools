@@ -35,6 +35,19 @@ from core.models import Pool, Coin, Chain, CoinPoolOffer, db_helper
 
 
 class DefiLamaScraper:
+    """
+    A scraper class for extracting data from DeFi Llama.
+
+    This class is responsible for scraping validator data from the DeFi Llama website,
+    processing the data, and storing it in the database.
+
+    Attributes:
+       driver: Selenium WebDriver instance.
+       display: Virtual display for headless browser operation.
+       filename: Name of the file to save scraped data.
+       url: URL of the DeFi Llama page to scrape.
+       validator_links: Dictionary mapping validator names to their website URLs.
+    """
     def __init__(self):
         self.driver = None
         self.display = None
@@ -73,6 +86,12 @@ class DefiLamaScraper:
 
     @staticmethod
     def get_chrome_driver() -> webdriver.Chrome:
+        """
+        Set up and return a Chrome WebDriver instance with specific options.
+
+        Returns:
+            webdriver.Chrome: Configured Chrome WebDriver instance.
+        """
         options = Options()
         options.headless = False
 
@@ -239,6 +258,18 @@ class DefiLamaScraper:
         return data
 
     async def scrape_validator_data(self, url):
+        """
+        Scrape validator data from the given URL.
+
+        This method navigates to the specified URL, scrolls through the page,
+        and extracts data for each validator found.
+
+        Args:
+            url (str): The URL to scrape data from.
+
+        Returns:
+            list: A list of tuples containing scraped data for each validator.
+        """
         with self.get_driver() as driver:
             try:
                 driver.get(url)

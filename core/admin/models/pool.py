@@ -9,13 +9,11 @@ from core import logger, pool_storage
 from .base import BaseAdminModel
 
 
-# TODO: Update model
-
 class PoolAdmin(BaseAdminModel, model=Pool):
     column_list = [Pool.name, Pool.is_active, Pool.website_url, Pool.id, Pool.logo, Pool.parsing_source]
     column_sortable_list = [Pool.name, Pool.is_active, Pool.website_url, Pool.parsing_source]
-    column_searchable_list = [Pool.name, Pool.website_url]
-    column_filters = [Pool.is_active, Pool.name]
+    column_searchable_list = [Pool.name, Pool.website_url, Pool.parsing_source, Pool.id]
+    column_filters = [Pool.is_active, Pool.name, Pool.parsing_source]
     column_details_list = ['name', 'website_url', 'is_active', 'id', 'logo', 'parsing_source', 'coin_pool_offers']
 
     form_columns = ['name', 'website_url', 'is_active', 'logo', 'parsing_source']

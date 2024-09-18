@@ -16,7 +16,7 @@ from .base import BaseAdminModel
 class ChainAdmin(BaseAdminModel, model=Chain):
     column_list = [Chain.name, Chain.is_active, Chain.id, Chain.logo]
     column_sortable_list = [Chain.name, Chain.is_active]
-    column_searchable_list = [Chain.name]
+    column_searchable_list = [Chain.name, Chain.id]
     column_filters = [Chain.is_active, Chain.name]
     column_details_list = ['name', 'is_active', 'id', 'logo', 'coins', 'coin_pool_offers']
 

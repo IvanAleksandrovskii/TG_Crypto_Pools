@@ -84,6 +84,15 @@ async def get_crypto_prices(crypto_ids):
 
 
 async def update_coin_prices():
+    """
+    Update the prices of all active coins in the database.
+
+    This function fetches the latest prices from the CoinGecko API for all active coins,
+    creates new CoinPrice instances with the updated prices, and saves them to the database.
+
+    Returns:
+        None
+    """
     async for session in db_helper.session_getter():
         try:
             all_active_coins = await get_all_coins(session)

@@ -15,8 +15,8 @@ from .base import BaseAdminModel
 
 class CoinAdmin(BaseAdminModel, model=Coin):
     column_list = [Coin.code, Coin.is_active, Coin.name, Coin.id, Coin.logo, Coin.coin_id_for_price_getter]
-    column_sortable_list = [Coin.name, Coin.code, Coin.is_active]
-    column_searchable_list = [Coin.name, Coin.code]
+    column_sortable_list = [Coin.name, Coin.code, Coin.is_active, Coin.coin_id_for_price_getter]
+    column_searchable_list = [Coin.name, Coin.code, Coin.coin_id_for_price_getter, Coin.id]
     column_filters = [Coin.is_active, Coin.name, Coin.code]
     column_details_list = ['name', 'code', 'is_active', 'id', 'logo', 'chains', 'pools', 'coin_id_for_price_getter']
 
@@ -61,7 +61,7 @@ class CoinAdmin(BaseAdminModel, model=Coin):
             chains = result.scalars().all()
             return [(str(chain.id), chain.name) for chain in chains]
 
-    async def get_one(self, _id):
+    async def get_one(self, _id):  # warning: ignore
         async with self.session as session:
             stmt = select(self.model).options(
                 selectinload(Coin.chains)
