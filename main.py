@@ -1,5 +1,4 @@
 import logging
-import random
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
@@ -9,6 +8,8 @@ from icecream import ic
 from fastapi.responses import ORJSONResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi import FastAPI, Response, Request
+from fastapi.middleware.cors import CORSMiddleware
+
 import uvicorn
 from sqladmin import Admin
 
@@ -20,7 +21,7 @@ from api import api_router
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from services import update_coin_prices
-from scraping import run_parsing
+from scraping import run_parsing_with_delay
 
 ic.disable()
 # ic.enable()
@@ -43,10 +44,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # not used: ign
         minute='*/' + str(settings.scheduler.currency_update_interval)
     )
     scheduler.add_job(
-        run_async(run_parsing),
+        run_async(run_parsing_with_delay),
         'cron',
         hour=str(settings.scheduler.offers_update_hour),
-        minute=f'{random.randint(*settings.scheduler.offers_update_min_range)}'
     )
     scheduler.start()
 

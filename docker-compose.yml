@@ -43,7 +43,6 @@ services:
       - DATA_UPD_INTERVAL_CURRENCY=${DATA_UPD_INTERVAL_CURRENCY:-10}
       - DATA_UPD_OFFERS_TIME_HOUR_UTC=${DATA_UPD_OFFERS_TIME_HOUR_UTC:-0}
       - DATA_UPD_OFFERS_TIME_RANDOM_MINUTE_FORM_TUPLE=${DATA_UPD_OFFERS_TIME_RANDOM_MINUTE_FORM_TUPLE:-(0, 25)}
-
       - SCRAPER_DEBUG=${SCRAPER_DEBUG:-False}  # With false on creation first scraping will run with debug anyway, next with log level warning
 
       - MEDIA_FILES_ALLOWED_EXTENSIONS=${MEDIA_FILES_ALLOWED_EXTENSIONS:-['.jpg', '.jpeg', '.png', '.gif', '.svg', '.ico', '.webp']}

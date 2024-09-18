@@ -36,9 +36,10 @@ DATA_UPD_OFFERS_TIME_HOUR_UTC = os.getenv("DATA_UPD_OFFERS_TIME_HOUR_UTC", 0)
 DATA_UPD_OFFERS_TIME_RANDOM_MINUTE_FORM_TUPLE = os.getenv("DATA_UPD_OFFERS_TIME_RANDOM_MINUTE_FORM_TUPLE", (0, 25))
 
 # Scraper ENV variables
-SCRAPER_DEBUG = os.getenv("SCRAPER_DEBUG", False)
+SCRAPER_DEBUG = os.getenv("SCRAPER_DEBUG", "False").lower() in ('true', '1')
 
-MEDIA_FILES_ALLOWED_EXTENSIONS = os.getenv("MEDIA_FILES_ALLOWED_EXTENSIONS", ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.ico', '.webp'])
+MEDIA_FILES_ALLOWED_EXTENSIONS = os.getenv("MEDIA_FILES_ALLOWED_EXTENSIONS",
+                                           ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.ico', '.webp'])
 
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS")
 
@@ -85,7 +86,7 @@ class MediaConfig(BaseModel):
     coins_path: str = "/app/media/coins"
     pools_path: str = "/app/media/pools"
     chains_path: str = "/app/media/chains"
-    allowed_image_extensions: List[str] = MEDIA_FILES_ALLOWED_EXTENSIONS
+    allowed_image_extensions: List[str] = list(MEDIA_FILES_ALLOWED_EXTENSIONS)
 
     @field_validator('coins_path', 'pools_path', 'chains_path')
     def validate_path(cls, v):
@@ -107,7 +108,7 @@ class ChromeConfig(BaseModel):
 class ScraperConfig(BaseModel):
     base_dir: str = os.path.join(os.getcwd(), "collected_data")
     processed_data_dir: str = os.path.join(base_dir, "processed_data")
-    debug: bool = SCRAPER_DEBUG
+    debug_conf: bool = SCRAPER_DEBUG
 
     @staticmethod
     def ensure_dir(directory):
@@ -130,7 +131,9 @@ class ScraperConfig(BaseModel):
 class SchedulerConfig(BaseModel):
     currency_update_interval: int = DATA_UPD_INTERVAL_CURRENCY  # Interval of currency update
     offers_update_hour: int = DATA_UPD_OFFERS_TIME_HOUR_UTC  # Exact hour of update offers from defilama and validator.info with UTC
-    offers_update_min_range: tuple = DATA_UPD_OFFERS_TIME_RANDOM_MINUTE_FORM_TUPLE  # Exact minute of update to avoid blocking dew to repeating time of parsing
+    offers_update_min_range: tuple = tuple(eval(DATA_UPD_OFFERS_TIME_RANDOM_MINUTE_FORM_TUPLE)) if isinstance(
+        DATA_UPD_OFFERS_TIME_RANDOM_MINUTE_FORM_TUPLE,
+        str) else DATA_UPD_OFFERS_TIME_RANDOM_MINUTE_FORM_TUPLE  # Exact minute of update to avoid blocking dew to repeating time of parsing
 
     @field_validator('currency_update_interval')
     def validate_currency_interval(cls, v):
@@ -146,7 +149,7 @@ class SchedulerConfig(BaseModel):
 
     @field_validator('offers_update_min_range')
     def validate_offers_min_range(cls, v):
-        if len(v) != 2 or not all(isinstance(x, int) and 0 <= x <= 59 for x in v) or v[0] > v[1]:
+        if len(v) != 2 or not all(isinstance(x, int) and 0 <= x <= 1440 for x in v) or v[0] > v[1]:
             raise ValueError(
                 "offers_update_min_range must be a tuple of two integers between 0 and 59, with the first less than or equal to the second")
         return v
