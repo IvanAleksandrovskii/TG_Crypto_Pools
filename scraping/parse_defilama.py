@@ -257,6 +257,111 @@ class DefiLamaScraper:
                 data.append("")  # Append empty string if cell is not found
         return data
 
+    # async def scrape_validator_data(self, url):
+    #     """
+    #     Scrape validator data from the given URL.
+    #
+    #     This method navigates to the specified URL, scrolls through the page,
+    #     and extracts data for each validator found.
+    #
+    #     Args:
+    #         url (str): The URL to scrape data from.
+    #
+    #     Returns:
+    #         list: A list of tuples containing scraped data for each validator.
+    #     """
+    #     with self.get_driver() as driver:
+    #         try:
+    #             driver.get(url)
+    #             time.sleep(10)  # Wait for page to load
+    #
+    #             table_wrapper = WebDriverWait(driver, 30).until(
+    #                 EC.presence_of_element_located((By.ID, "table-wrapper"))
+    #             )
+    #
+    #             data = []
+    #             processed_rows = 0
+    #             no_new_data_count = 0
+    #             max_no_new_data = 3
+    #             scroll_distance = 200
+    #
+    #             while True:
+    #                 try:
+    #                     rows = table_wrapper.find_elements(By.CSS_SELECTOR, 'div[style*="position: absolute; top: "]')
+    #
+    #                     if not rows:
+    #                         logger.warning("No rows found. Waiting and trying again...")
+    #                         time.sleep(5)
+    #                         no_new_data_count += 1
+    #                         if no_new_data_count >= max_no_new_data:
+    #                             break
+    #                         continue
+    #
+    #                     new_data_added = False
+    #                     for row in rows[processed_rows:]:
+    #                         try:
+    #                             cells = row.find_elements(By.CSS_SELECTOR, 'div[class^="sc-57594dc7-1"]')
+    #
+    #                             if len(cells) >= 11:
+    #                                 name_cell = cells[0].find_element(By.CSS_SELECTOR, 'span[class^="sc-f61b72e9-0"]')
+    #                                 name = name_cell.text.strip()
+    #                                 clean_name = self._clean_validator_name(name)
+    #
+    #                                 validator_link = name_cell.find_element(By.TAG_NAME, 'a').get_attribute('href')
+    #                                 image_link = name_cell.find_element(By.TAG_NAME, 'img').get_attribute('src')
+    #
+    #                                 staked_eth = cells[1].text.strip()
+    #                                 tvl = cells[2].text.strip()
+    #                                 change_7d = cells[3].text.strip()
+    #                                 change_30d = cells[4].text.strip()
+    #                                 market_share = cells[5].text.strip()
+    #                                 lsd = cells[6].text.strip()
+    #                                 eth_peg = cells[7].text.strip()
+    #                                 mcap_tvl = cells[8].text.strip()
+    #                                 lsd_apr = cells[9].text.strip()
+    #                                 fee = cells[10].text.strip()
+    #
+    #                                 item = (
+    #                                     clean_name, validator_link, image_link, staked_eth, tvl, change_7d, change_30d,
+    #                                     market_share, lsd, eth_peg, mcap_tvl, lsd_apr, fee
+    #                                 )
+    #                                 data.append(item)
+    #                                 new_data_added = True
+    #                                 processed_rows += 1
+    #
+    #                         except Exception as e:
+    #                             logger.error(f"Error processing row: {str(e)}")
+    #                             continue
+    #
+    #                     if new_data_added:
+    #                         no_new_data_count = 0
+    #                     else:
+    #                         no_new_data_count += 1
+    #
+    #                     if no_new_data_count >= max_no_new_data:
+    #                         logger.info("No new data after multiple attempts. Exiting loop.")
+    #                         break
+    #
+    #                     driver.execute_script(f"window.scrollBy(0, {scroll_distance});")
+    #                     time.sleep(2)
+    #
+    #                 except Exception as e:
+    #                     logger.error(f"Error during scraping: {str(e)}")
+    #                     break
+    #
+    #             return data
+    #
+    #         except TimeoutException:
+    #             logger.error("Timed out waiting for page to load")
+    #         except NoSuchElementException as e:
+    #             logger.error(f"Element not found: {str(e)}")
+    #         except Exception as e:
+    #             logger.error(f"Unexpected error during scraping: {str(e)}")
+    #         finally:
+    #             driver.quit()
+    #
+    #         return []
+
     async def scrape_validator_data(self, url):
         """
         Scrape validator data from the given URL.
@@ -276,18 +381,19 @@ class DefiLamaScraper:
                 time.sleep(10)  # Wait for page to load
 
                 table_wrapper = WebDriverWait(driver, 30).until(
-                    EC.presence_of_element_located((By.ID, "table-wrapper"))
+                    EC.presence_of_element_located((By.XPATH, "//div[@id='table-wrapper']"))
                 )
 
                 data = []
                 processed_rows = 0
                 no_new_data_count = 0
-                max_no_new_data = 3
-                scroll_distance = 200
+                max_no_new_data = 5
+                scroll_distance = 300
 
                 while True:
                     try:
-                        rows = table_wrapper.find_elements(By.CSS_SELECTOR, 'div[style*="position: absolute; top: "]')
+                        rows = table_wrapper.find_elements(By.XPATH,
+                                                           ".//div[contains(@style, 'position: absolute; top:')]")
 
                         if not rows:
                             logger.warning("No rows found. Waiting and trying again...")
@@ -300,15 +406,16 @@ class DefiLamaScraper:
                         new_data_added = False
                         for row in rows[processed_rows:]:
                             try:
-                                cells = row.find_elements(By.CSS_SELECTOR, 'div[class^="sc-57594dc7-1"]')
+                                cells = row.find_elements(By.XPATH, "./div")
 
                                 if len(cells) >= 11:
-                                    name_cell = cells[0].find_element(By.CSS_SELECTOR, 'span[class^="sc-f61b72e9-0"]')
+                                    name_cell = cells[0].find_element(By.XPATH,
+                                                                      ".//span[contains(@class, 'sc-f61b72e9-0')]")
                                     name = name_cell.text.strip()
                                     clean_name = self._clean_validator_name(name)
 
-                                    validator_link = name_cell.find_element(By.TAG_NAME, 'a').get_attribute('href')
-                                    image_link = name_cell.find_element(By.TAG_NAME, 'img').get_attribute('src')
+                                    validator_link = name_cell.find_element(By.XPATH, ".//a").get_attribute('href')
+                                    image_link = name_cell.find_element(By.XPATH, ".//img").get_attribute('src')
 
                                     staked_eth = cells[1].text.strip()
                                     tvl = cells[2].text.strip()
