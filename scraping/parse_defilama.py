@@ -613,6 +613,11 @@ class DefiLamaScraper:
                 await self.process_logos(session, link_image_data, existing_validators)
 
                 session.add_all(offers_to_create)
+
+                if len(offers_to_create) == 0:
+                    logger.error("!!!!!!!!!! No offers to add from DefiLama! Check if parser is broken !!!!!!!!!!")
+                    raise Exception("No offers to add from DefiLama! Check if parser is broken!")
+
                 await session.commit()
                 logger.info(f"Added {len(validators_to_create)} new validators and {len(offers_to_create)} new offers.")
 
