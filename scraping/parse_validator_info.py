@@ -21,6 +21,25 @@ from core.models import Pool, db_helper, Chain, Coin
 from core import settings
 
 
+async def get_chain_data(chain_name, chains_data):
+    logger.info(f"Searching for chain data: {chain_name}")
+    # Сначала ищем по точному совпадению
+    chain_data = next((item for item in chains_data if item.get('name') == chain_name), None)
+
+    if chain_data is None:
+        # Если не найдено, ищем по нормализованному имени
+        normalized_name = normalize_chain_name(chain_name)
+        logger.info(f"Exact match not found. Searching for normalized name: {normalized_name}")
+        chain_data = next((item for item in chains_data if normalize_chain_name(item.get('name', '')) == normalized_name), None)
+
+    if chain_data:
+        logger.info(f"Found chain data for {chain_name}: {chain_data}")
+    else:
+        logger.warning(f"No chain data found for {chain_name}")
+
+    return chain_data
+
+
 async def parse_validator_info():
     logger.info("Scraping started.")
 
@@ -71,17 +90,17 @@ async def parse_validator_info():
         "polygon": "POL",
     }
 
-    async def get_chain_data(chain_name, chains_data):
-        # Сначала ищем по точному совпадению
-        chain_data = next((item for item in chains_data if item.get('name') == chain_name), None)
-
-        if chain_data is None:
-            # Если не найдено, ищем по нормализованному имени
-            normalized_name = normalize_chain_name(chain_name)
-            chain_data = next(
-                (item for item in chains_data if normalize_chain_name(item.get('name', '')) == normalized_name), None)
-
-        return chain_data
+    # async def get_chain_data(chain_name, chains_data):
+    #     # Сначала ищем по точному совпадению
+    #     chain_data = next((item for item in chains_data if item.get('name') == chain_name), None)
+    #
+    #     if chain_data is None:
+    #         # Если не найдено, ищем по нормализованному имени
+    #         normalized_name = normalize_chain_name(chain_name)
+    #         chain_data = next(
+    #             (item for item in chains_data if normalize_chain_name(item.get('name', '')) == normalized_name), None)
+    #
+    #     return chain_data
 
     try:
         # Scrape main page
@@ -215,10 +234,17 @@ async def parse_validator_info():
 
                         staked_total = float(chain_data.get('totalStakedUsd', 0))
                         price_data = chain_data.get('priceData', {})
-                        chain_price = float(price_data.get('_price', 0))
+
+                        # Получаем цену из данных сайта
+                        chain_price = float(price_data.get('price', 0))
+
+                        logger.info(f"Staked total for {chain_name}: {staked_total}")
+                        logger.info(f"Price data for {chain_name}: {price_data}")
+                        logger.info(f"Chain price from website for {chain_name}: {chain_price}")
 
                         if chain_price == 0:
                             # Если цена не доступна из API, пробуем получить из базы данных
+                            coin_code = url_to_coin_code.get(url.split('/')[-1])
                             db_price = await get_latest_price_from_db(session, coin_code)
                             if db_price is not None:
                                 chain_price = db_price
@@ -229,7 +255,7 @@ async def parse_validator_info():
                                     f"No price found for {coin_code} (chain: {chain_name}). Using default price of 1.")
                                 chain_price = 1
 
-                        logger.info(f"Chain's ({chain_name}) associated coin ({coin_code}) price: {chain_price}")
+                        logger.info(f"Final chain price for {chain_name}: {chain_price}")
 
                         # Clean and get current validators
                         current_validators = set(df_validators['Validator'].apply(clean_validator_name))
