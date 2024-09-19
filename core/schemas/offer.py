@@ -19,7 +19,6 @@ class OfferResponse(BaseResponse):
     liquidity_token: bool
     liquidity_token_name: Optional[str]
     created_at: datetime
-    historical_coin_price: Optional[float] = Field(None, description="Coin price at the time of offer creation")
 
     @classmethod
     def model_validate(cls, obj, **kwargs):
@@ -36,7 +35,6 @@ class OfferResponse(BaseResponse):
             liquidity_token=obj.liquidity_token,
             liquidity_token_name=obj.liquidity_token_name,
             created_at=obj.created_at,
-            historical_coin_price=obj.historical_coin_price if hasattr(obj, 'historical_coin_price') else None
         )
 
 

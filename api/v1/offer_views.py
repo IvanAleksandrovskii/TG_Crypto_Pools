@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, selectinload
+from sqlalchemy.orm import joinedload, selectinload  # unused: ignore, error in IDE, it is used!
 
 from core import logger
 from core.models import db_helper, CoinPoolOffer, Coin, Pool, Chain, CoinPrice

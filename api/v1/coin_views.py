@@ -24,7 +24,7 @@ async def get_all_coins(
         order_desc: Optional[bool] = Query(None, description="Order in descending order")
 ):
     try:
-        # Подзапрос для получения последней цены для каждой монеты
+        # Subquery to get latest prices
         latest_price_subquery = (
             select(CoinPrice.coin_id, func.max(CoinPrice.created_at).label('max_date'))
             .group_by(CoinPrice.coin_id)
