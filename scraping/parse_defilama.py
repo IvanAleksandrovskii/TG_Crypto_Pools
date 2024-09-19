@@ -33,6 +33,8 @@ from scraping import logger
 from core.config import settings
 from core.models import Pool, Coin, Chain, CoinPoolOffer, db_helper
 
+# TODO: Add deactivation for polls with no offers found!
+
 
 class DefiLamaScraper:
     """

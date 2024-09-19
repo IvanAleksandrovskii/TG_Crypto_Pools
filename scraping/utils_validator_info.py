@@ -236,6 +236,8 @@ async def process_offers_from_csv(session: AsyncSession, coins_dict: Dict[str, U
             logger.warning(f"Chain ID for '{chain_name}' not found in chain_dict. Skipping file {file}")
             continue
 
+        # TODO: Fix duplications in the code (LATER)
+
         url_to_coin_code = {
             "lava": "LAVA",
             "dydx": "DYDX",

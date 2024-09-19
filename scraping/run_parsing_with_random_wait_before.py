@@ -9,8 +9,9 @@ from core.config import settings
 
 async def run_parsing_with_delay():
 
+    # Anti-blocking random delay
     min_min, min_max = settings.scheduler.offers_update_min_range
-    await asyncio.sleep(random.randint(min_min, min_max))
+    await asyncio.sleep(random.randint(min_min, min_max) * 60 + random.randint(min_min, min_max))
 
     try:
         await parse_defilama()

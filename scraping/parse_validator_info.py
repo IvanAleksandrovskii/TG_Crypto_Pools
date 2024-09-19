@@ -39,6 +39,19 @@ async def get_chain_data(chain_name, chains_data):
 
     return chain_data
 
+# "Found chain data for celestia: {'name': 'celestia', 'apr': '9.9488254018019616',
+# 'priceData': {'currency': 'TIA', 'price': '6.01', 'marketCap': '1269383999', 'circulatingSupply': '211838048.297693',
+# 'totalSupply': '1070794520.54769', 'priceChangePercentage24H': '12.759240932414706',
+# 'marketCapChangePercentage24H': '12.446605255824254', 'timestamp': '2024-09-19T05:11:03.233Z'},
+# 'totalStaked': '787067806.768755', 'totalStakedUsd': '4730277518.68021755', 'totalDelegators': 410760,
+# 'validatorSetSize': 100, 'validatorSetSizeMax': 100, 'govProposalsActive': 0}"
+
+# web-1  | {"asctime": "2024-09-19 05:46:40", "name": "SCRAPING", "levelname": "INFO", "message": "Found chain data for terra-classic: {'name': 'terra-classic', 'apr': '9.8648320818069792', 'priceData': {'price': '0.0000846', 'marketCap': '483036122', 'circulatingSupply': '5703457002759.21', 'totalSupply': '6774367855781.87', 'priceChangePercentage24H': '3.16232', 'marketCapChangePercentage24H': '3.32462'}, 'totalStaked': '1048787061151.542801', 'totalStakedUsd': '88727385.3734205209646', 'totalDelegators': 198594, 'validatorSetSize': 100, 'validatorSetSizeMax': 110, 'govProposalsActive': 5}", "filename": "parse_validator_info.py", "lineno": 36, "taskName": "Task-1"}
+# web-1  | {"asctime": "2024-09-19 05:46:40", "name": "SCRAPING", "levelname": "INFO", "message": "Staked total for terra-classic: 88727385.37342052", "filename": "parse_validator_info.py", "lineno": 241, "taskName": "Task-1"}
+# web-1  | {"asctime": "2024-09-19 05:46:40", "name": "SCRAPING", "levelname": "INFO", "message": "Price data for terra-classic: {'price': '0.0000846', 'marketCap': '483036122', 'circulatingSupply': '5703457002759.21', 'totalSupply': '6774367855781.87', 'priceChangePercentage24H': '3.16232', 'marketCapChangePercentage24H': '3.32462'}", "filename": "parse_validator_info.py", "lineno": 242, "taskName": "Task-1"}
+# web-1  | {"asctime": "2024-09-19 05:46:40", "name": "SCRAPING", "levelname": "INFO", "message": "Chain price from website for terra-classic: 8.46e-05", "filename": "parse_validator_info.py", "lineno": 243, "taskName": "Task-1"}
+# web-1  | {"asctime": "2024-09-19 05:46:40", "name": "SCRAPING", "levelname": "INFO", "message": "Final chain price for terra-classic: 8.46e-05", "filename": "parse_validator_info.py", "lineno": 258, "taskName": "Task-1"}
+
 
 async def parse_validator_info():
     logger.info("Scraping started.")
@@ -47,16 +60,16 @@ async def parse_validator_info():
     settings.scraper.ensure_dir(settings.scraper.processed_data_dir)
 
     urls = [
-        # "https://validator.info/lava",
-        # "https://validator.info/dydx",
+        "https://validator.info/lava",
+        "https://validator.info/dydx",
         "https://validator.info/cronos-pos",
-        # "https://validator.info/celestia",
+        "https://validator.info/celestia",
         "https://validator.info/terra-classic",
-        # "https://validator.info/dymension",
+        "https://validator.info/dymension",
         "https://validator.info/saga",
         "https://validator.info/haqq",
-        # "https://validator.info/coreum",
-        # "https://validator.info/nolus",
+        "https://validator.info/coreum",
+        "https://validator.info/nolus",
         "https://validator.info/polygon",
     ]
 
@@ -89,18 +102,6 @@ async def parse_validator_info():
         "nolus": "NLS",
         "polygon": "POL",
     }
-
-    # async def get_chain_data(chain_name, chains_data):
-    #     # Сначала ищем по точному совпадению
-    #     chain_data = next((item for item in chains_data if item.get('name') == chain_name), None)
-    #
-    #     if chain_data is None:
-    #         # Если не найдено, ищем по нормализованному имени
-    #         normalized_name = normalize_chain_name(chain_name)
-    #         chain_data = next(
-    #             (item for item in chains_data if normalize_chain_name(item.get('name', '')) == normalized_name), None)
-    #
-    #     return chain_data
 
     try:
         # Scrape main page
@@ -188,43 +189,6 @@ async def parse_validator_info():
                         if df_validators is None or df_validators.empty:
                             logger.warning(f"No validator data found for {chain_name}")
                             continue
-
-                        # Process validator data
-                        # chain_data = next(
-                        #     (item for item in chains_data if item.get('name', '').lower() == chain_name.lower()), None)
-                        #
-                        # if df_validators is None or df_validators.empty:
-                        #     logger.warning(f"No validator data found for {chain_name}")
-                        #     continue
-                        #
-                        # staked_total = float(chain_data.get('totalStakedUsd', 0))
-                        # price_data = chain_data.get('priceData', {})
-                        #
-                        # # Chain price here is representing a coin price, it is just associated with that chain in validator.info
-                        # chain_price = float(price_data.get('_price', 0))  # Default to 1 if _price is not available
-
-                        # Get the coin code directly from the predefined mapping
-                        coin_code = url_to_coin_code.get(url.split('/')[-1])
-
-                        # # Chain price here is representing a coin price associated with the chain in validator.info
-                        # chain_price = float(price_data.get('_price', 0))  # Default to 0 if _price is not available
-                        #
-                        # if chain_price == 0:
-                        #     # If price is not available from API, fetch from database
-                        #     if coin_code:
-                        #         db_price = await get_latest_price_from_db(session, coin_code)
-                        #         if db_price is not None:
-                        #             chain_price = db_price
-                        #             logger.info(f"Using price from database for {coin_code} (chain: {chain_name}): {chain_price}")
-                        #         else:
-                        #             logger.warning(f"No price found in database for {coin_code} (chain: {chain_name}). Using default price of 1.")
-                        #             chain_price = 1
-                        #     else:
-                        #         logger.warning(
-                        #             f"No coin code found for URL {url} (chain: {chain_name}). Using default price of 1.")
-                        #         chain_price = 1
-                        #
-                        # logger.info(f"Chain's ({chain_name}) associated coin ({coin_code}) price: {chain_price}")
 
                         chain_data = await get_chain_data(chain_name, chains_data)
 
