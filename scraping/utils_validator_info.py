@@ -236,13 +236,43 @@ async def process_offers_from_csv(session: AsyncSession, coins_dict: Dict[str, U
             logger.warning(f"Chain ID for '{chain_name}' not found in chain_dict. Skipping file {file}")
             continue
 
-        coin = coin_by_chain.get(chain_name)
-        if not coin:
-            logger.warning(f"Coin not found for chain {chain_name}. Skipping file {file}")
+        url_to_coin_code = {
+            "lava": "LAVA",
+            "dydx": "DYDX",
+            "cronos-pos": "CRO",
+            "celestia": "TIA",
+            "terra-classic": "LUNC",
+            "dymension": "DYM",
+            "saga": "SAGA",
+            "haqq": "ISLM",
+            "coreum": "COREUM",
+            "nolus": "NLS",
+            "polygon": "POL",
+        }
+
+        url_to_chain_name = {
+            "lava": "Lava",
+            "dydx": "dYdX",
+            "cronos-pos": "Cronos Pos",
+            "celestia": "Celestia",
+            "terra-classic": "Terra Classic",
+            "dymension": "Dymension",
+            "saga": "Saga",
+            "haqq": "HAQQ",
+            "coreum": "Coreum",
+            "nolus": "Nolus",
+            "polygon": "Polygon",
+        }
+
+        # Получаем правильный код монеты для данной сети
+        coin_code = next((code for url, code in url_to_coin_code.items() if url_to_chain_name[url] == chain_name), None)
+        if not coin_code:
+            logger.warning(f"Coin code not found for chain {chain_name}. Skipping file {file}")
             continue
-        coin_id = coins_dict.get(coin.code)
+
+        coin_id = coins_dict.get(coin_code)
         if not coin_id:
-            logger.warning(f"Coin {coin.code} not found in coins_dict for chain {chain_name}. Skipping file {file}")
+            logger.warning(f"Coin {coin_code} not found in coins_dict for chain {chain_name}. Skipping file {file}")
             continue
 
         try:
