@@ -610,6 +610,7 @@ class DefiLamaScraper:
 
                     if validator and apr and apr.strip() != "":
                         offer = self.create_coin_pool_offer_object(validator, chain, coin, market_share, lsd, apr, fee)
+                        session.add(offer)
                         offers_to_create.append(offer)
                         processed_validators.add(name)
                         logger.info(f"Created new offer: {offer}")
@@ -629,6 +630,7 @@ class DefiLamaScraper:
                     logger.error("!!!!!!!!!! No offers to add from DefiLama! Check if parser is broken !!!!!!!!!!")
                     raise Exception("No offers to add from DefiLama! Check if parser is broken!")
 
+                await session.flush()
                 await session.commit()
                 logger.info(f"Added {len(validators_to_create)} new validators and {len(offers_to_create)} new offers.")
 

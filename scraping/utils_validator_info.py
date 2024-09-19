@@ -288,7 +288,7 @@ async def process_offers_from_csv(session: AsyncSession, coins_dict: Dict[str, U
             pool_name = row['name']
             pool_id = pools_dict.get(pool_name)
             if not pool_id:
-                logger.warning(f"Pool {pool_name} not found in pools_dict. Skipping this offer.")
+                logger.info(f"Pool {pool_name} not found in pools_dict, no valid link for this provider was found. Skipping this offer.")
                 continue
 
             try:
