@@ -3,11 +3,14 @@
 ## Overview
 This project is a FastAPI-based application that provides an API for managing and querying 
 cryptocurrency investment pools, coins, chains, and offers. It includes functionality for offer management, 
-coin, chain and pool relationships, and comprehensive querying options.
+coin, chain and pool relationships, comprehensive querying options, and automated data collection from external sources.
 
 ## Features
 - Admin panel for data management
 - Flexible API for querying investment opportunities
+- Automated data collection from DeFi Llama and validator.info
+- Scheduled updates of cryptocurrency prices and offers
+- Asynchronous programming for improved performance
 
 ## Technologies Used
 - FastAPI
@@ -17,6 +20,10 @@ coin, chain and pool relationships, and comprehensive querying options.
 - Pydantic (for data validation)
 - Docker
 - SQLAdmin (for admin panel)
+- APScheduler (for scheduled tasks)
+- Selenium (for web scraping)
+- aiohttp (for asynchronous HTTP requests)
+- AsyncIO (for asynchronous programming)
 
 ## Prerequisites
 - Docker (for containerized deployment)
@@ -30,8 +37,7 @@ coin, chain and pool relationships, and comprehensive querying options.
 2. Create a `.env` file in the project root or fill in the `docker-compose.yml` file with the required environment variables (see next section).
 
 3. Build and run the Docker containers:
-docker-compose up --build
-Copy
+
 4. The API will be available at `http://localhost:8000` and the admin panel at `http://localhost:8000/admin` (by default configuration).
 
 ## Environment Variables
@@ -76,6 +82,15 @@ Create a `.env` file or fill in the `docker-compose.yml` file with the following
   - Description: Enables or disables debug mode for the application.
   - Example: DEBUG=False
 
+### Data Collection Configuration:
+- `DATA_UPD_INTERVAL_CURRENCY`: Interval for updating currency prices (in minutes)
+- `DATA_UPD_OFFERS_TIME_HOUR_UTC`: Hour (UTC) for daily offer updates
+- `DATA_UPD_OFFERS_TIME_RANDOM_MINUTE_FORM_TUPLE`: Range of minutes for randomizing offer update time, used to prevent blocking 0-30/0-60 might be perfect
+- `SCRAPER_DEBUG`: Enable/disable debug mode for web scraping
+
+### CORS Configuration:
+- `ALLOWED_ORIGINS`: List of allowed origins for CORS
+
 ### SQLAdmin Configuration:
 - `SQLADMIN_SECRET_KEY=<your_sqladmin_secret_key>`
   - Description: Secret key used for securing the SQLAdmin interface.
@@ -88,6 +103,9 @@ Create a `.env` file or fill in the `docker-compose.yml` file with the following
 - `SQLADMIN_PASSWORD=<your_sqladmin_password>`
   - Description: Password for accessing the SQLAdmin interface.
   - Example: SQLADMIN_PASSWORD=very_secure_admin_password
+
+## Initial Data Collection
+On first startup, the application will perform an initial data collection to populate the database with cryptocurrency data from external sources. This process may take some time.
 
 ## API Documentation
 
@@ -108,9 +126,9 @@ Here's a detailed breakdown of what you can do:
   - `order_desc` (optional): Set to true for descending order
 - **Sorting Options:**
   - Supported fields for sorting: "lock_period", "apr", "created_at", "amount_from", "pool_share", "liquidity_token", "liquidity_token_name", "coin_id", "pool_id", "chain_id", "id"
-  - Default sorting is by "pool_id"
+  - Default sorting is by "apr" in descending order
 - **What you'll get back:** 
-  - A list of offer objects, each containing details about the offer, associated coin, chain, and pool.
+  - A list of offer objects, each containing details about the offer, associated coin, chain, and pool, including current coin price.
 
 #### Get Offer by ID
 - **Endpoint:** `GET /api/v1/offer/{offer_id}`
@@ -121,22 +139,8 @@ Here's a detailed breakdown of what you can do:
 - **Query Parameters:**
   - `days` (optional): Number of days to fetch offer history
 - **What you'll get back:**
-  - Detailed offer information including associated coin, chain, and pool. If now days provided the only history will be returned (current).
-  - Offer history showing how APR, amount, and pool share have changed over time. If days is provided, the API will return a history for the period, current offer will be first on the list.
-
-**Note on Offer History:** When you specify the `days` parameter, the API will return a history of changes to the offer over that period. This includes variations in APR, minimum amount, and pool share, allowing you to track how the offer has evolved over time.
-
-#### Get Max APR Offer
-- **Endpoint:** `GET /api/v1/offer/max-apr/{coin_id}`
-- **What it does:**
-  - Finds the offer with the highest APR for a specific coin.
-- **Path Parameters:**
-  - `coin_id`: UUID of the coin
-- **Query Parameters:**
-  - `chain_id` (optional): UUID of the chain to filter offers
-  - `pool_id` (optional): UUID of the pool to filter offers
-- **What you'll get back:**
-  - The offer with the highest APR that matches the specified criteria.
+  - Detailed offer information including associated coin, chain, and pool. If no days provided, only the current offer will be returned.
+  - Offer history showing how APR, amount, pool share, and historical coin price have changed over time. If days is provided, the API will return a history for the period, with the current offer first on the list.
 
 ### Coins
 
@@ -151,7 +155,7 @@ Here's a detailed breakdown of what you can do:
   - Supported fields for sorting: "name", "code", "id"
   - Default sorting is by "name"
 - **What you'll get back:**
-  - A list of coin objects, each containing the coin's details including name, code, and logo URL.
+  - A list of coin objects, each containing the coin's details including name, code, logo URL, and current price.
 
 #### Get Coin by ID
 - **Endpoint:** `GET /api/v1/coin/{coin_id}`
@@ -160,7 +164,7 @@ Here's a detailed breakdown of what you can do:
 - **Path Parameters:**
   - `coin_id`: UUID of the coin
 - **What you'll get back:**
-  - Detailed information about the specified coin.
+  - Detailed information about the specified coin, including its current price.
 
 ### Chains
 
@@ -212,6 +216,18 @@ Here's a detailed breakdown of what you can do:
 
 For all endpoints that require an ID, you'll need to provide the UUID of the item you're looking for. 
 The API will return detailed information about the requested item or a list of items, depending on the endpoint.
+
+### Additional Notes:
+- Offer endpoints now include current coin prices in the response.
+- Coin endpoints include the current price of the coin.
+
+## Scheduled Tasks
+The application uses APScheduler to perform regular updates:
+- Cryptocurrency prices are updated at configurable intervals.
+- Offer data is updated daily at a configured time with a randomized delay to avoid rate limiting or blocking.
+
+## Media Files
+The application handles storage and serving of media files (such as coin and pool logos) through FastAPI's StaticFiles.
 
 ## Swagger UI Documentation
 For an interactive API documentation experience, you can access the Swagger UI by navigating to `/docs` in your browser
