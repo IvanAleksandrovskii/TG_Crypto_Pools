@@ -41,7 +41,12 @@ class Coin(Base):
         back_populates="coin",
         lazy="noload",
         cascade="all, delete-orphan",
+        order_by="desc(CoinPrice.created_at)",
     )
+
+    @property
+    def latest_price(self):
+        return self.prices[0] if self.prices else None
 
     def __repr__(self):
         return f"Coin(name='{self.name}', code='{self.code}', id={self.id})"

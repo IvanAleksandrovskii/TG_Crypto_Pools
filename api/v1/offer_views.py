@@ -6,10 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, selectinload
 
 from core import logger
-from core.models import db_helper, CoinPoolOffer, Coin, Pool, Chain
+from core.models import db_helper, CoinPoolOffer, Coin, Pool, Chain, CoinPrice
 from core.schemas import (
     OfferResponse, OfferResponseWithHistory, OfferHistory,
     PoolResponse, ChainResponse, CoinResponse,
@@ -36,7 +36,7 @@ async def get_latest_offers():
             CoinPoolOffer.pool_id,
             CoinPoolOffer.chain_id,
             CoinPoolOffer.lock_period,
-            func.max(CoinPoolOffer.created_at).label("max_created_at")  # filters latest created_at
+            func.max(CoinPoolOffer.created_at).label("max_created_at")
         )
         .group_by(
             CoinPoolOffer.coin_id,
@@ -58,7 +58,7 @@ async def get_latest_offers():
             (CoinPoolOffer.created_at == subquery.c.max_created_at)
         )
         .options(
-            joinedload(CoinPoolOffer.coin),
+            joinedload(CoinPoolOffer.coin).selectinload(Coin.prices),
             joinedload(CoinPoolOffer.pool),
             joinedload(CoinPoolOffer.chain)
         )
@@ -76,6 +76,9 @@ async def get_latest_offers():
     return query
 
 
+# TODO: Add pagination
+
+
 @router.get("/", response_model=List[OfferResponse])
 async def get_all_offers(
         coin_id: Optional[UUID] = Query(None, description="Filter by coin ID"),
@@ -88,7 +91,6 @@ async def get_all_offers(
     try:
         query = await get_latest_offers()
 
-        # Apply filters based on provided query parameters
         if coin_id:
             query = query.filter(CoinPoolOffer.coin_id == coin_id)
         if chain_id:
@@ -96,7 +98,6 @@ async def get_all_offers(
         if pool_id:
             query = query.filter(CoinPoolOffer.pool_id == pool_id)
 
-        # Apply ordering
         query = query.order_by(offer_ordering.order_by(order, order_desc))
 
         result = await session.execute(query)
@@ -120,11 +121,10 @@ async def get_offer_by_id(
     session: AsyncSession = Depends(db_helper.session_getter)
 ):
     try:
-        # Base query first
         base_query = (
             CoinPoolOffer.active()
             .options(
-                joinedload(CoinPoolOffer.coin),
+                joinedload(CoinPoolOffer.coin).selectinload(Coin.prices),
                 joinedload(CoinPoolOffer.pool),
                 joinedload(CoinPoolOffer.chain)
             )
@@ -142,20 +142,22 @@ async def get_offer_by_id(
         if not base_offer:
             raise HTTPException(status_code=404, detail="Offer not found")
 
+        # Get historical price for base offer
+        historical_price_query = select(CoinPrice).filter(
+            CoinPrice.coin_id == base_offer.coin_id,
+            CoinPrice.created_at <= base_offer.created_at
+        ).order_by(CoinPrice.created_at.desc()).limit(1)
+        historical_price_result = await session.execute(historical_price_query)
+        historical_price = historical_price_result.scalar_one_or_none()
+        base_offer.historical_coin_price = historical_price.price if historical_price else None
+
         if days is None:
-            # If days is not provided, return only the current offer in history
             history = [OfferHistory.model_validate(base_offer)]
         else:
-            # If days is provided, get the offer history
             start_date = datetime.now(UTC) - timedelta(days=days)
 
             history_query = (
                 select(CoinPoolOffer)
-                .options(
-                    joinedload(CoinPoolOffer.coin),
-                    joinedload(CoinPoolOffer.pool),
-                    joinedload(CoinPoolOffer.chain)
-                )
                 .filter(
                     CoinPoolOffer.coin_id == base_offer.coin_id,
                     CoinPoolOffer.pool_id == base_offer.pool_id,
@@ -167,9 +169,18 @@ async def get_offer_by_id(
                 .order_by(CoinPoolOffer.created_at.desc())
             )
             result = await session.execute(history_query)
-            offers = result.unique().scalars().all()
+            offers = result.scalars().all()
 
-            history = [OfferHistory.model_validate(offer) for offer in offers]
+            history = []
+            for offer in offers:
+                historical_price_query = select(CoinPrice).filter(
+                    CoinPrice.coin_id == offer.coin_id,
+                    CoinPrice.created_at <= offer.created_at
+                ).order_by(CoinPrice.created_at.desc()).limit(1)
+                historical_price_result = await session.execute(historical_price_query)
+                historical_price = historical_price_result.scalar_one_or_none()
+                offer.historical_coin_price = historical_price.price if historical_price else None
+                history.append(OfferHistory.model_validate(offer))
 
         return OfferResponseWithHistory(
             id=base_offer.id,

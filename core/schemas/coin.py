@@ -9,6 +9,7 @@ class CoinResponse(BaseResponse):
     name: Optional[str]
     code: str
     logo: Optional[str] = Field(None, )
+    current_price: Optional[float] = Field(None, description="Current price of the coin")
 
     @classmethod
     def model_validate(cls, obj, **kwargs):
@@ -20,4 +21,5 @@ class CoinResponse(BaseResponse):
             name=obj.name,
             code=obj.code,
             logo=logo_path,
+            current_price=obj.latest_price.price if obj.latest_price else None,
         )
