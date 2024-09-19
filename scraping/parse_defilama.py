@@ -571,6 +571,7 @@ class DefiLamaScraper:
                 validators_to_create = []
                 offers_to_create = []
                 link_image_data = {}
+                processed_validators = set()
 
                 for validator_data in scraped_data:
                     name, validator_link, image_link, _, _, _, _, market_share, lsd, _, _, apr, fee = validator_data
@@ -610,7 +611,15 @@ class DefiLamaScraper:
                     if validator and apr and apr.strip() != "":
                         offer = self.create_coin_pool_offer_object(validator, chain, coin, market_share, lsd, apr, fee)
                         offers_to_create.append(offer)
+                        processed_validators.add(name)
                         logger.info(f"Created new offer: {offer}")
+
+                # Deactivate validators not found in scraped data or without valid offers
+                if len(offers_to_create) > 10:
+                    for name, validator in existing_validators.items():
+                        if name not in processed_validators and validator.is_active:
+                            validator.is_active = False
+                            logger.info(f"Deactivated validator: {name}")
 
                 await self.process_logos(session, link_image_data, existing_validators)
 
