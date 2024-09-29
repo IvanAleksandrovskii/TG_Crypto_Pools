@@ -3,6 +3,7 @@ from core.admin.models.pool import PoolAdmin
 from core.admin.models.coin import CoinAdmin
 from core.admin.models.chain import ChainAdmin
 from core.admin.models.coin_price import CoinPriceAdmin
+from .clicker import ClickerAdmin
 
 
 # Register admin views
@@ -12,3 +13,4 @@ def setup_admin(admin):
     admin.add_view(PoolAdmin)
     admin.add_view(CoinPoolOfferAdmin)
     admin.add_view(CoinPriceAdmin)
+    admin.add_view(ClickerAdmin)

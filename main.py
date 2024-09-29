@@ -23,6 +23,8 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from services import update_coin_prices
 from scraping import run_parsing_with_delay
 
+from clickers_services import init_clickers
+
 ic.disable()
 # ic.enable()
 
@@ -36,6 +38,8 @@ def run_async(func):
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # not used: ignore
     # Startup
     logger.info("Starting up the FastAPI application...")
+
+    await init_clickers()
 
     scheduler = AsyncIOScheduler()
     scheduler.add_job(

@@ -7,6 +7,7 @@ __all__ = [
     'Pool',
     'CoinPoolOffer',
     'CoinPrice',
+    'Clicker',
 ]
 
 from .db_helper import db_helper
@@ -17,3 +18,4 @@ from .coin import Coin
 from .pool import Pool
 from .coin_pool_offer import CoinPoolOffer
 from .coin_price import CoinPrice
+from .clicker import Clicker
