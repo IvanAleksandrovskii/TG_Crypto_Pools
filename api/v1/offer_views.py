@@ -77,13 +77,17 @@ async def get_latest_offers():
 
 
 # TODO: Add pagination
-
-
 @router.get("/", response_model=List[OfferResponse])
 async def get_all_offers(
         coin_id: Optional[UUID] = Query(None, description="Filter by coin ID"),
         chain_id: Optional[UUID] = Query(None, description="Filter by chain ID"),
         pool_id: Optional[UUID] = Query(None, description="Filter by pool ID"),
+        apr_from: Optional[float] = Query(None, ge=0, description="Minimum APR"),
+        apr_to: Optional[float] = Query(None, ge=0, description="Maximum APR"),
+        lock_period_from: Optional[int] = Query(None, ge=0, description="Minimum lock period"),
+        lock_period_to: Optional[int] = Query(None, description="Maximum lock period"),
+        amount_from: Optional[float] = Query(None, ge=0, description="Minimum amount"),
+        amount_to: Optional[float] = Query(None, description="Maximum amount"),
         session: AsyncSession = Depends(db_helper.session_getter),
         order: Optional[str] = Query(None, description="Order by field"),
         order_desc: Optional[bool] = Query(None, description="Order in descending order")
@@ -98,14 +102,32 @@ async def get_all_offers(
         if pool_id:
             query = query.filter(CoinPoolOffer.pool_id == pool_id)
 
+        # APR filter
+        if apr_from is not None:
+            query = query.filter(CoinPoolOffer.apr >= apr_from)
+        if apr_to is not None:
+            query = query.filter(CoinPoolOffer.apr <= apr_to)
+
+        # Lock period filter
+        if lock_period_from is not None:
+            query = query.filter(CoinPoolOffer.lock_period >= lock_period_from)
+        if lock_period_to is not None:
+            query = query.filter(CoinPoolOffer.lock_period <= lock_period_to)
+
+        # Amount filter
+        if amount_from is not None:
+            query = query.filter(CoinPoolOffer.amount_from >= amount_from)
+        if amount_to is not None:
+            query = query.filter(CoinPoolOffer.amount_from <= amount_to)
+
         query = query.order_by(offer_ordering.order_by(order, order_desc))
 
         result = await session.execute(query)
         offers = result.unique().scalars().all()
 
         logger.info(f"Number of offers retrieved: {len(offers)}")
-        for offer in offers:
-            logger.info(f"Offer ID: {offer.id}, Coin: {offer.coin.code}, Pool: {offer.pool.name}")
+        # for offer in offers:
+        #     logger.info(f"Offer ID: {offer.id}, Coin: {offer.coin.code}, Pool: {offer.pool.name}")
 
         return [OfferResponse.model_validate(offer) for offer in offers]
 

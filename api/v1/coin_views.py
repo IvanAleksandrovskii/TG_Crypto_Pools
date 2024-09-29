@@ -1,5 +1,5 @@
 from typing import List, Optional
-from uuid import UUID
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, func
@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from core import logger
-from core.models import db_helper, Coin, CoinPrice
+from core.models import db_helper, Coin, CoinPrice, Chain, coin_chain
 from core.schemas import CoinResponse
 from utils import Ordering
 
@@ -21,7 +21,8 @@ coin_ordering = Ordering(Coin, ["name", "code", "id"], default_field="name")
 async def get_all_coins(
         session: AsyncSession = Depends(db_helper.session_getter),
         order: Optional[str] = Query(None, description="Order by field"),
-        order_desc: Optional[bool] = Query(None, description="Order in descending order")
+        order_desc: Optional[bool] = Query(None, description="Order in descending order"),
+        chain_id: Optional[uuid.UUID] = Query(None, description="Filter by chain ID")
 ):
     try:
         # Subquery to get latest prices
@@ -31,14 +32,27 @@ async def get_all_coins(
             .subquery()
         )
 
-        # Основной запрос
+        # Main query
         query = (
             select(Coin, CoinPrice)
             .outerjoin(latest_price_subquery, Coin.id == latest_price_subquery.c.coin_id)
             .outerjoin(CoinPrice, (CoinPrice.coin_id == Coin.id) &
                        (CoinPrice.created_at == latest_price_subquery.c.max_date))
-            .options(selectinload(Coin.prices))
             .where(Coin.is_active == True)
+        )
+
+        # Apply chain filter if provided
+        if chain_id:
+            query = (
+                query
+                .join(coin_chain)
+                .join(Chain)
+                .where(Chain.id == chain_id)
+            )
+
+        query = (
+            query
+            .options(selectinload(Coin.prices))
             .order_by(coin_ordering.order_by(order, order_desc))
         )
 
@@ -59,7 +73,7 @@ async def get_all_coins(
 
 @router.get("/{coin_id}", response_model=CoinResponse)
 async def get_coin_by_id(
-        coin_id: UUID,
+        coin_id: uuid.UUID,
         session: AsyncSession = Depends(db_helper.session_getter)
 ):
     try:

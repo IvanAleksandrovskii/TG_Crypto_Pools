@@ -4,9 +4,10 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from core import logger
-from core.models import db_helper, Chain
+from core.models import db_helper, Chain, Coin, coin_chain
 from core.schemas import ChainResponse
 from utils import Ordering
 
@@ -19,17 +20,35 @@ chain_ordering = Ordering(Chain, ["name", "id"], default_field="name")
 async def get_all_chains(
     session: AsyncSession = Depends(db_helper.session_getter),
     order: Optional[str] = Query(None, description="Order by field"),
-    order_desc: Optional[bool] = Query(None, description="Order in descending order")
+    order_desc: Optional[bool] = Query(None, description="Order in descending order"),
+    coin_id: Optional[UUID] = Query(None, description="Filter by coin ID")
 ):
-    query = Chain.active().order_by(chain_ordering.order_by(order, order_desc))
     try:
+        query = Chain.active()
+
+        # Apply coin filter if provided
+        if coin_id:
+            query = (
+                query
+                .join(coin_chain)
+                .join(Coin)
+                .where(Coin.id == coin_id)
+            )
+
+        query = (
+            query
+            .options(selectinload(Chain.coins))
+            .order_by(chain_ordering.order_by(order, order_desc))
+        )
+
         result = await session.execute(query)
-        chains = result.scalars().all()
+        chains = result.unique().scalars().all()
+
+        return [ChainResponse.model_validate(chain) for chain in chains]
     except SQLAlchemyError as e:
         logger.exception(f"Unexpected error occurred in get_all_chains: {e}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
-    return [ChainResponse.model_validate(chain) for chain in chains]
 
 
 @router.get("/{chain_id}", response_model=ChainResponse)
