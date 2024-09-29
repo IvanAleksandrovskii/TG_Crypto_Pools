@@ -88,6 +88,8 @@ async def get_all_offers(
         lock_period_to: Optional[int] = Query(None, description="Maximum lock period"),
         amount_from: Optional[float] = Query(None, ge=0, description="Minimum amount"),
         amount_to: Optional[float] = Query(None, description="Maximum amount"),
+        pool_share_from: Optional[float] = Query(None, ge=0, description="Minimum pool share"),
+        pool_share_to: Optional[float] = Query(None, description="Maximum pool share"),
         session: AsyncSession = Depends(db_helper.session_getter),
         order: Optional[str] = Query(None, description="Order by field"),
         order_desc: Optional[bool] = Query(None, description="Order in descending order")
@@ -120,14 +122,18 @@ async def get_all_offers(
         if amount_to is not None:
             query = query.filter(CoinPoolOffer.amount_from <= amount_to)
 
+        # Pool share filter
+        if pool_share_from is not None:
+            query = query.filter(CoinPoolOffer.pool_share >= pool_share_from)
+        if pool_share_to is not None:
+            query = query.filter(CoinPoolOffer.pool_share <= pool_share_to)
+
         query = query.order_by(offer_ordering.order_by(order, order_desc))
 
         result = await session.execute(query)
         offers = result.unique().scalars().all()
 
         logger.info(f"Number of offers retrieved: {len(offers)}")
-        # for offer in offers:
-        #     logger.info(f"Offer ID: {offer.id}, Coin: {offer.coin.code}, Pool: {offer.pool.name}")
 
         return [OfferResponse.model_validate(offer) for offer in offers]
 
