@@ -23,3 +23,11 @@ class CoinResponse(BaseResponse):
             logo=logo_path,
             current_price=obj.latest_price.price if obj.latest_price else None,
         )
+
+
+class CoinExtendedResponse(CoinResponse):
+    max_apr: Optional[float] = Field(None, description="Maximum APR from active offers")
+    min_amount_from: Optional[float] = Field(None, description="Minimum amount_from from active offers")
+
+    class Config:
+        from_attributes = True
