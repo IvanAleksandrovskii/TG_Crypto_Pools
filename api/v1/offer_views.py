@@ -7,6 +7,7 @@ from sqlalchemy import select, func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload  # unused: ignore, error in IDE, it is used!
+from sqlalchemy_filters import apply_pagination
 
 from core import logger
 from core.models import db_helper, CoinPoolOffer, Coin, Pool, Chain, CoinPrice
@@ -76,7 +77,6 @@ async def get_latest_offers():
     return query
 
 
-# TODO: Add pagination
 @router.get("/", response_model=List[OfferResponse])
 async def get_all_offers(
         coin_id: Optional[UUID] = Query(None, description="Filter by coin ID"),
@@ -92,7 +92,9 @@ async def get_all_offers(
         pool_share_to: Optional[float] = Query(None, description="Maximum pool share"),
         session: AsyncSession = Depends(db_helper.session_getter),
         order: Optional[str] = Query(None, description="Order by field"),
-        order_desc: Optional[bool] = Query(None, description="Order in descending order")
+        order_desc: Optional[bool] = Query(None, description="Order in descending order"),
+        page: int = Query(1, ge=1, description="Page number"),
+        page_size: int = Query(20, ge=1, le=100, description="Items per page")
 ):
     try:
         query = await get_latest_offers()
@@ -128,7 +130,15 @@ async def get_all_offers(
         if pool_share_to is not None:
             query = query.filter(CoinPoolOffer.pool_share <= pool_share_to)
 
+        # Apply ordering
         query = query.order_by(offer_ordering.order_by(order, order_desc))
+
+        # Count total items
+        count_query = query.with_only_columns(func.count().label("count")).order_by(None)
+        # total_items = await session.scalar(count_query)
+
+        # Apply pagination
+        query = query.offset((page - 1) * page_size).limit(page_size)
 
         result = await session.execute(query)
         offers = result.unique().scalars().all()
