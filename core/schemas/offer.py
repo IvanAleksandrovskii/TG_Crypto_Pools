@@ -1,6 +1,7 @@
 from datetime import datetime
 from typing import Optional, List
-from pydantic import Field
+from pydantic import Field, BaseModel
+
 from .base import BaseResponse
 from .chain import ChainResponse
 from .coin import CoinResponse
@@ -36,6 +37,18 @@ class OfferResponse(BaseResponse):
             liquidity_token_name=obj.liquidity_token_name,
             created_at=obj.created_at,
         )
+
+
+class PaginationMetadata(BaseModel):
+    page: int
+    page_size: int
+    total_pages: int
+    total_items: int
+
+
+class PaginatedOfferResponse(BaseModel):
+    items: List[OfferResponse]
+    pagination: PaginationMetadata
 
 
 class OfferHistory(BaseResponse):

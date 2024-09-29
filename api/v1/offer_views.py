@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, UTC
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -7,13 +7,12 @@ from sqlalchemy import select, func
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload  # unused: ignore, error in IDE, it is used!
-from sqlalchemy_filters import apply_pagination
 
 from core import logger
 from core.models import db_helper, CoinPoolOffer, Coin, Pool, Chain, CoinPrice
 from core.schemas import (
     OfferResponse, OfferResponseWithHistory, OfferHistory,
-    PoolResponse, ChainResponse, CoinResponse,
+    PoolResponse, ChainResponse, CoinResponse, PaginatedOfferResponse, PaginationMetadata,
 )
 from utils import Ordering
 
@@ -77,7 +76,7 @@ async def get_latest_offers():
     return query
 
 
-@router.get("/", response_model=List[OfferResponse])
+@router.get("/", response_model=PaginatedOfferResponse)
 async def get_all_offers(
         coin_id: Optional[UUID] = Query(None, description="Filter by coin ID"),
         chain_id: Optional[UUID] = Query(None, description="Filter by chain ID"),
@@ -135,7 +134,7 @@ async def get_all_offers(
 
         # Count total items
         count_query = query.with_only_columns(func.count().label("count")).order_by(None)
-        # total_items = await session.scalar(count_query)
+        total_items = await session.scalar(count_query)
 
         # Apply pagination
         query = query.offset((page - 1) * page_size).limit(page_size)
@@ -143,9 +142,19 @@ async def get_all_offers(
         result = await session.execute(query)
         offers = result.unique().scalars().all()
 
+        total_pages = (total_items + page_size - 1) // page_size
+
         logger.info(f"Number of offers retrieved: {len(offers)}")
 
-        return [OfferResponse.model_validate(offer) for offer in offers]
+        return PaginatedOfferResponse(
+            items=[OfferResponse.model_validate(offer) for offer in offers],
+            pagination=PaginationMetadata(
+                page=page,
+                page_size=page_size,
+                total_pages=total_pages,
+                total_items=total_items
+            )
+        )
 
     except SQLAlchemyError as e:
         logger.exception(f"Unexpected error occurred in get_all_offers: {e}")
@@ -181,13 +190,13 @@ async def get_offer_by_id(
             raise HTTPException(status_code=404, detail="Offer not found")
 
         # Get historical price for base offer
-        historical_price_query = select(CoinPrice).filter(
-            CoinPrice.coin_id == base_offer.coin_id,
-            CoinPrice.created_at <= base_offer.created_at
-        ).order_by(CoinPrice.created_at.desc()).limit(1)
-        historical_price_result = await session.execute(historical_price_query)
-        historical_price = historical_price_result.scalar_one_or_none()
-        base_offer.historical_coin_price = historical_price.price if historical_price else None
+        # historical_price_query = select(CoinPrice).filter(
+        #     CoinPrice.coin_id == base_offer.coin_id,
+        #     CoinPrice.created_at <= base_offer.created_at
+        # ).order_by(CoinPrice.created_at.desc()).limit(1)
+        # historical_price_result = await session.execute(historical_price_query)
+        # historical_price = historical_price_result.scalar_one_or_none()
+        # base_offer.historical_coin_price = historical_price.price if historical_price else None
 
         if days is None:
             history = [OfferHistory.model_validate(base_offer)]
