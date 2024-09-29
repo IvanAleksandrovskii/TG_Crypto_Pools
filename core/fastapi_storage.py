@@ -43,5 +43,6 @@ ALLOWED_IMAGE_EXTENSIONS = settings.media.allowed_image_extensions
 coin_storage = CustomFileSystemStorage(settings.media.coins_path, ALLOWED_IMAGE_EXTENSIONS)
 pool_storage = CustomFileSystemStorage(settings.media.pools_path, ALLOWED_IMAGE_EXTENSIONS)
 chain_storage = CustomFileSystemStorage(settings.media.chains_path, ALLOWED_IMAGE_EXTENSIONS)
+clicker_storage = CustomFileSystemStorage(settings.media.clickers_path, ALLOWED_IMAGE_EXTENSIONS)
 
 logger.info("Initialized all storage instances")

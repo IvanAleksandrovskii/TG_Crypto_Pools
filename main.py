@@ -80,6 +80,7 @@ main_app.include_router(api_router, prefix=settings.api.prefix)
 main_app.mount("/media/coins", StaticFiles(directory=settings.media.coins_path), name="coins_media")
 main_app.mount("/media/pools", StaticFiles(directory=settings.media.pools_path), name="pools_media")
 main_app.mount("/media/chains", StaticFiles(directory=settings.media.chains_path), name="chains_media")
+main_app.mount("/media/clickers", StaticFiles(directory=settings.media.clickers_path), name="clickers_media")
 
 
 # Favicon.ico errors silenced

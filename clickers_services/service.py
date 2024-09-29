@@ -46,7 +46,8 @@ async def import_clickers_from_csv():
                         token_launch_date=parse_date(row['Token launch date']),
                         telegram_channel=row['Telegram channel '].strip(),
                         partners=row['Partners'],
-                        comment=row['']
+                        comment=row[''],
+                        logo=None,
                     )
                     session.add(clicker)
 

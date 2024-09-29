@@ -1,7 +1,9 @@
+from fastapi_storages.integrations.sqlalchemy import FileType
 from sqlalchemy import String, Date
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import Base
+from core import clicker_storage
 
 
 class Clicker(Base):
@@ -17,6 +19,7 @@ class Clicker(Base):
     partners: Mapped[str] = mapped_column(String, nullable=True)
 
     comment: Mapped[str] = mapped_column(String, nullable=True)
+    logo = mapped_column(FileType(storage=clicker_storage))
 
     def __repr__(self):
         return f"Clicker(name='{self.name}', coin='{self.coin}')"

@@ -86,6 +86,7 @@ class MediaConfig(BaseModel):
     coins_path: str = "/app/media/coins"
     pools_path: str = "/app/media/pools"
     chains_path: str = "/app/media/chains"
+    clickers_path: str = "/app/media/clickers"
     allowed_image_extensions: List[str] = list(MEDIA_FILES_ALLOWED_EXTENSIONS)
 
     @field_validator('coins_path', 'pools_path', 'chains_path')
