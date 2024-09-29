@@ -14,7 +14,7 @@ import uvicorn
 from sqladmin import Admin
 
 from core.admin import async_sqladmin_db_helper, sqladmin_authentication_backend
-from core.models import db_helper
+from core.models import db_helper, check_and_update_tables
 from core.admin.models import setup_admin
 from core import settings, logger
 from api import api_router
@@ -40,6 +40,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # not used: ign
     logger.info("Starting up the FastAPI application...")
 
     await init_clickers()
+
+    await check_and_update_tables(engine=async_sqladmin_db_helper.engine)
 
     scheduler = AsyncIOScheduler()
     scheduler.add_job(

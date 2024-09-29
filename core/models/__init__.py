@@ -8,6 +8,9 @@ __all__ = [
     'CoinPoolOffer',
     'CoinPrice',
     'Clicker',
+    'TgUser',
+    'TgUserLog',
+    'check_and_update_tables',
 ]
 
 from .db_helper import db_helper
@@ -19,3 +22,4 @@ from .pool import Pool
 from .coin_pool_offer import CoinPoolOffer
 from .coin_price import CoinPrice
 from .clicker import Clicker
+from .tg_log import TgUser, TgUserLog, check_and_update_tables

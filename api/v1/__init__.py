@@ -5,6 +5,7 @@ from .coin_views import router as coin_router
 from .pool_views import router as pool_router
 from .offer_views import router as offer_router
 from .clicker_views import router as clicker_router
+from .tg_log import router as log_router
 
 
 router = APIRouter()
@@ -14,3 +15,4 @@ router.include_router(coin_router, prefix="/coin", tags=["coin"])
 router.include_router(pool_router, prefix="/pool", tags=["pool"])
 router.include_router(offer_router, prefix="/offer", tags=["offer"])
 router.include_router(clicker_router, prefix="/clicker", tags=["clicker"])
+router.include_router(log_router, prefix="/log", tags=["log"])
