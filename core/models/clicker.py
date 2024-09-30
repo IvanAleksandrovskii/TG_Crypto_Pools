@@ -1,5 +1,5 @@
 from fastapi_storages.integrations.sqlalchemy import FileType
-from sqlalchemy import String, Date
+from sqlalchemy import String, Date, BigInteger
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import Base
@@ -11,7 +11,7 @@ class Clicker(Base):
     description: Mapped[str] = mapped_column(String, nullable=True)
     time_spent: Mapped[str] = mapped_column(String, nullable=True)
     link: Mapped[str] = mapped_column(String, nullable=True)
-    audience: Mapped[str] = mapped_column(String, nullable=True)
+    audience: Mapped[int] = mapped_column(BigInteger, nullable=True)
     coin: Mapped[str] = mapped_column(String, nullable=True)
     app_launch_date: Mapped[Date] = mapped_column(Date, nullable=True)
     token_launch_date: Mapped[Date] = mapped_column(Date, nullable=True)

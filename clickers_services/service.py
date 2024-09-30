@@ -9,6 +9,16 @@ from core import logger
 from core.models import db_helper
 
 
+def convert_audience(audience_str: str) -> int:
+    audience_str = audience_str.replace(',', '').strip().lower()
+    if audience_str.endswith('k'):
+        return int(float(audience_str[:-1]) * 1000)
+    elif audience_str.endswith('m'):
+        return int(float(audience_str[:-1]) * 1000000)
+    else:
+        return int(float(audience_str))
+
+
 async def import_clickers_from_csv():
     current_dir = os.path.dirname(os.path.abspath(__file__))
     csv_file_path = os.path.join(current_dir, 'data', 'ClickersList.csv')
@@ -40,7 +50,7 @@ async def import_clickers_from_csv():
                         description=row['Description'],
                         time_spent=row['Time spent'],
                         link=row['Link'],
-                        audience=row['Audience'],
+                        audience=convert_audience(row['Audience']),
                         coin=row['Coin'],
                         app_launch_date=parse_date(row['App launch date']),
                         token_launch_date=parse_date(row['Token launch date']),

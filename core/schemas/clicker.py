@@ -10,7 +10,7 @@ class ClickerResponse(BaseModel):
     description: Optional[str]
     time_spent: Optional[str]
     link: Optional[str]
-    audience: Optional[str]
+    audience: Optional[int]
     coin: Optional[str]
     app_launch_date: Optional[date]
     token_launch_date: Optional[date]

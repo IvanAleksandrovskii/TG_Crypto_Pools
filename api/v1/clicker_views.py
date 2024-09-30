@@ -14,7 +14,7 @@ router = APIRouter()
 # Define the allowed fields for ordering
 ALLOWED_ORDER_FIELDS = ["name", "coin", "audience", "app_launch_date", "token_launch_date"]
 
-clicker_ordering = Ordering(Clicker, ALLOWED_ORDER_FIELDS, default_field="name", default_desc=False)
+clicker_ordering = Ordering(Clicker, ALLOWED_ORDER_FIELDS, default_field="audience", default_desc=True)
 
 @router.get("/", response_model=List[ClickerResponse])
 async def get_all_clickers(
