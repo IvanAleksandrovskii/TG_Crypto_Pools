@@ -45,6 +45,13 @@ MEDIA_FILES_ALLOWED_EXTENSIONS = os.getenv("MEDIA_FILES_ALLOWED_EXTENSIONS",
 USER_CACHE_TTL = int(os.getenv("USER_CACHE_TTL", 6))
 USER_MAX_CACHED = int(os.getenv("USER_MAX_CACHED", 1000))
 
+# TGBot ENV variables
+TGBOT_TOKEN = os.getenv("TGBOT_TOKEN")
+TGBOT_WELCOME_MESSAGE_CACHED_TIME = int(os.getenv("TGBOT_WELCOME_MESSAGE_CACHED_TIME", 60))
+TGBOT_DEBUG = os.getenv("TGBOT_DEBUG", "False").lower() in ('true', '1')
+TGBOT_USER_ERROR_MESSAGE = os.getenv("TGBOT_USER_ERROR_MESSAGE", "Извините, произошла ошибка. Пожалуйста, попробуйте позже.")
+TGBOT_USER_FALLBACK_GREETING = os.getenv("TGBOT_USER_FALLBACK_GREETING", "Привет, {username}, добро пожаловать!")
+
 
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS")
 
@@ -176,6 +183,17 @@ class TGLogConfig(BaseModel):
         return v
 
 
+class TGBotConfig(BaseModel):
+    token: str = TGBOT_TOKEN
+    welcome_message_cached_time: int = TGBOT_WELCOME_MESSAGE_CACHED_TIME
+    debug: bool = TGBOT_DEBUG
+    user_error_message: str = TGBOT_USER_ERROR_MESSAGE
+    fallback_greeting_user_message: str = TGBOT_USER_FALLBACK_GREETING
+    admin_error_message: str = ("Извините, произошла ошибка. Пожалуйста, попробуйте позже или обратитесь к разработчику с "
+                          "подробной информацией: когда и после какого действия произошла ошибка.")
+    confirming_words: list[str] = ["да", "yes", "конечно", "отправить", "send", "accept", "absolutely"]
+
+
 class Settings(BaseSettings):
     run: RunConfig = RunConfig()
     db: DBConfig = DBConfig()
@@ -187,6 +205,7 @@ class Settings(BaseSettings):
     scheduler: SchedulerConfig = SchedulerConfig()
     cors: CORSConfig = CORSConfig()
     tg_log: TGLogConfig = TGLogConfig()
+    bot: TGBotConfig = TGBotConfig()
 
 
 settings = Settings()

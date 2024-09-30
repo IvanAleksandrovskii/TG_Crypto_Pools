@@ -11,6 +11,8 @@ __all__ = [
     'TgUser',
     'TgUserLog',
     'check_and_update_tables',
+    'WelcomeMessage',
+    'check_table',
 ]
 
 from .db_helper import db_helper
@@ -23,3 +25,4 @@ from .coin_pool_offer import CoinPoolOffer
 from .coin_price import CoinPrice
 from .clicker import Clicker
 from .tg_log import TgUser, TgUserLog, check_and_update_tables
+from .tg_welcome_message import WelcomeMessage, check_table

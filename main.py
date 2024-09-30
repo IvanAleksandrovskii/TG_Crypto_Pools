@@ -25,6 +25,11 @@ from scraping import run_parsing_with_delay
 
 from clickers_services import init_clickers
 
+from core.models import check_table
+
+from bot_main import main as start_bot
+
+
 ic.disable()
 # ic.enable()
 
@@ -41,7 +46,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # not used: ign
 
     await init_clickers()
 
+    # Create or update TG Log tables
     await check_and_update_tables(engine=async_sqladmin_db_helper.engine)
+    # Create or update TG Welcome Message table
+    await check_table(engine=async_sqladmin_db_helper.engine)
 
     scheduler = AsyncIOScheduler()
     scheduler.add_job(
@@ -56,6 +64,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # not used: ign
     )
     scheduler.start()
 
+    # Start the bot in a separate task
+    bot_task = asyncio.create_task(start_bot())
+
     yield
 
     # Shutdown
@@ -63,6 +74,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # not used: ign
     scheduler.shutdown()
     await db_helper.dispose()
     await async_sqladmin_db_helper.dispose()
+
+    # Cancel the bot task
+    bot_task.cancel()
+    try:
+        await bot_task
+    except asyncio.CancelledError:
+        logger.info("Bot task cancelled successfully")
 
 
 main_app = FastAPI(

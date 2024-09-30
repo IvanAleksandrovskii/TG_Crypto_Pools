@@ -52,6 +52,13 @@ services:
       - USER_CACHE_TTL=${USER_CACHE_TTL:-6}
       - USER_MAX_CACHED=${USER_MAX_CACHED:-1000}
 
+      - DEBUG=${DEBUG:-True}
+      - TGBOT_TOKEN=${TGBOT_TOKEN:-7322997021:AAHil4yx54uaAaJKXgYzjYDwC76KiIpTKwc}
+      - TGBOT_WELCOME_MESSAGE_CACHED_TIME=${TGBOT_WELCOME_MESSAGE_CACHED_TIME:-60}
+      - TGBOT_USER_ERROR_MESSAGE=${TGBOT_USER_ERROR_MESSAGE:-Извините, произошла ошибка. Пожалуйста, попробуйте позже.}
+      - TGBOT_USER_FALLBACK_GREETING=${TGBOT_USER_FALLBACK_GREETING:-Привет, {username}, добро пожаловать!}
+
+
     command: /app/start.sh
     volumes:
       - media_files:/app/media

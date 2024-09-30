@@ -5,6 +5,7 @@ from core.admin.models.chain import ChainAdmin
 from core.admin.models.coin_price import CoinPriceAdmin
 from .clicker import ClickerAdmin
 from .tg_log import TgUserLogAdmin, TgUserAdmin
+from .tg_welcome_message import WelcomeMessageAdmin
 
 
 # Register admin views
@@ -17,3 +18,4 @@ def setup_admin(admin):
     admin.add_view(ClickerAdmin)
     admin.add_view(TgUserLogAdmin)
     admin.add_view(TgUserAdmin)
+    admin.add_view(WelcomeMessageAdmin)
