@@ -41,6 +41,11 @@ SCRAPER_DEBUG = os.getenv("SCRAPER_DEBUG", "False").lower() in ('true', '1')
 MEDIA_FILES_ALLOWED_EXTENSIONS = os.getenv("MEDIA_FILES_ALLOWED_EXTENSIONS",
                                            ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.ico', '.webp'])
 
+# TG Log cache helping ENV variables
+USER_CACHE_TTL = int(os.getenv("USER_CACHE_TTL", 6))
+USER_MAX_CACHED = int(os.getenv("USER_MAX_CACHED", 1000))
+
+
 ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS")
 
 
@@ -160,6 +165,17 @@ class CORSConfig(BaseModel):
     allowed_origins: List = ALLOWED_ORIGINS
 
 
+class TGLogConfig(BaseModel):
+    user_cache_ttl_hours: int = USER_CACHE_TTL
+    users_cache_max_count: int = USER_MAX_CACHED
+
+    @field_validator('user_cache_ttl_hours', 'users_cache_max_count')
+    def validate_positive(cls, v):
+        if v <= 0:
+            raise ValueError("Must be a positive integer")
+        return v
+
+
 class Settings(BaseSettings):
     run: RunConfig = RunConfig()
     db: DBConfig = DBConfig()
@@ -170,6 +186,7 @@ class Settings(BaseSettings):
     scraper: ScraperConfig = ScraperConfig()
     scheduler: SchedulerConfig = SchedulerConfig()
     cors: CORSConfig = CORSConfig()
+    tg_log: TGLogConfig = TGLogConfig()
 
 
 settings = Settings()
